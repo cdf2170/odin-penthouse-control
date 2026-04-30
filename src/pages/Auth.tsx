@@ -110,6 +110,18 @@ export default function Auth() {
               />
             </div>
 
+            <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={stayLoggedIn}
+                onChange={(e) => setStayLoggedIn(e.target.checked)}
+                className="w-3.5 h-3.5 accent-odin-accent cursor-pointer"
+              />
+              <span className="label group-hover:text-foreground transition-colors">
+                Stay signed in on this device
+              </span>
+            </label>
+
             {err && (
               <div className="text-[12px] text-odin-accent border border-odin-accent/30 px-3 py-2 bg-odin-accent/5">
                 {err}
