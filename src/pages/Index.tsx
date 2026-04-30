@@ -275,6 +275,13 @@ const RoomDetailsTray = ({
 
   const onLights = room.lights.filter(isOn);
   const anyOn = onLights.length > 0;
+  const totalBrightness = onLights.reduce(
+    (acc: number, l) => acc + ((l.attributes?.brightness as number) ?? 0),
+    0,
+  );
+  const avgLevel = onLights.length
+    ? Math.round((totalBrightness / onLights.length / 255) * 100)
+    : 0;
 
   const toggleAll = () =>
     callService("light", anyOn ? "turn_off" : "turn_on", {
