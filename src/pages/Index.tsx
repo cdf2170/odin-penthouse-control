@@ -515,31 +515,31 @@ const Climate = () => {
     });
   };
 
-  const cycleMode = () => {
-    const i = modes.indexOf(mode);
-    const next = modes[(i + 1) % modes.length] ?? modes[0];
+  const setMode = (m: string) => {
     callService("climate", "set_hvac_mode", {
       entity_id: zone.state.entity_id,
-      hvac_mode: next,
+      hvac_mode: m,
     });
   };
+
+  const quickModes: { key: string; label: string }[] = [
+    { key: "heat", label: "Heat" },
+    { key: "auto", label: modes.includes("auto") ? "Auto" : "Heat/Cool" },
+    { key: "off", label: "Off" },
+  ].filter((m) => modes.includes(m.key) || (m.key === "auto" && modes.includes("heat_cool")));
 
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
         <Label>Climate</Label>
-        <button
-          onClick={cycleMode}
-          className="flex items-center gap-2 btn-tactile px-2.5 py-1 text-[10px] tracking-[0.14em] uppercase text-foreground-dim"
-          title="Cycle HVAC mode"
-        >
-          <Snowflake className="w-3 h-3" strokeWidth={1.5} />
-          {mode}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <Snowflake className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
+          <span className="mono text-[10px] uppercase text-foreground-dim">{mode}</span>
+        </div>
       </div>
 
       {climateZones.length > 1 && (
-        <div className="flex flex-wrap gap-1 mb-4">
+        <div className="flex flex-wrap gap-1 mb-3">
           {climateZones.map((z, i) => (
             <button
               key={z.state.entity_id}
@@ -551,6 +551,27 @@ const Climate = () => {
           ))}
         </div>
       )}
+
+      <div className="flex items-stretch gap-1.5 mb-4">
+        {quickModes.map((m) => {
+          const target = m.key === "auto" && !modes.includes("auto") ? "heat_cool" : m.key;
+          const active = mode === target;
+          return (
+            <button
+              key={m.key}
+              onClick={() => setMode(target)}
+              className={`flex-1 py-2 mono text-[10px] tracking-[0.18em] uppercase border transition-colors ${
+                active
+                  ? "border-odin-accent/80 text-odin-accent bg-odin-accent/10"
+                  : "border-hairline-strong text-foreground-mute hover:text-foreground"
+              }`}
+              style={active ? { boxShadow: "0 0 14px hsl(var(--accent) / 0.18) inset" } : undefined}
+            >
+              {m.label}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="flex items-center gap-3">
         <button
@@ -1270,16 +1291,10 @@ const QuickControls = () => {
   if (tiles.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-          {tiles}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <GarageQuickCard />
-        <AirPurifierQuickCard />
+    <div>
+      <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+        {tiles}
       </div>
     </div>
   );
