@@ -92,23 +92,34 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
     <Hairline />
     <div className="px-6 py-5 space-y-3">
       <div className="flex items-center justify-between">
-        <Label>Network</Label>
+        <Label>HA Link</Label>
         <div className="flex items-center gap-2">
-          <StatusDot state="ok" />
-          <span className="mono text-[11px] text-foreground-dim">ONLINE</span>
+          <StatusDot state={connected ? "active" : error ? "alert" : "idle"} />
+          <span className="mono text-[11px] text-foreground-dim">
+            {connected ? "LIVE" : error ? "OFFLINE" : "…"}
+          </span>
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <Label>Devices</Label>
-        <span className="mono text-[11px] text-foreground-dim num">187 / 187</span>
+        <Label>Entities</Label>
+        <span className="mono text-[11px] text-foreground-dim num">{entityCount}</span>
       </div>
       <div className="flex items-center justify-between">
-        <Label>Latency</Label>
-        <span className="mono text-[11px] text-foreground-dim num">12 ms</span>
+        <Label>Operator</Label>
+        <span className="mono text-[11px] text-foreground-dim truncate max-w-[120px]">
+          {user?.email ?? "—"}
+        </span>
       </div>
+      <button
+        onClick={signOut}
+        className="w-full text-left label hover:text-odin-accent transition-colors pt-1"
+      >
+        Sign out →
+      </button>
     </div>
   </aside>
-);
+  );
+};
 
 const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
   const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
