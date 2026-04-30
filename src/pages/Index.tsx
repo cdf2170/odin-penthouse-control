@@ -826,7 +826,7 @@ const NowPlaying = () => {
   const svc = (service: string, data: Record<string, unknown> = {}) =>
     callService("media_player", service, { entity_id: playing.entity_id, ...data });
   const remote = (command: string) =>
-    callService("remote", "send_command", { entity_id: "remote.tcl_smart_tv", command });
+    callService("remote", "send_command", { entity_id: "remote.tlc_smart_tv", command });
 
   const title =
     (a.media_title as string) ??
