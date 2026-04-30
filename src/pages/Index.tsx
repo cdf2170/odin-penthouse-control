@@ -322,7 +322,7 @@ const DeviceCard = ({
       {onLevelChange && (
         <div className="mt-5">
           <Slider
-            value={[on ? level ?? 0 : 0]}
+            value={[level ?? 0]}
             min={0}
             max={100}
             step={1}
@@ -512,16 +512,15 @@ const RoomDetailsTray = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {room.lights.map((l) => {
                     const on = isOn(l);
-                    const level = on
-                      ? Math.round((((l.attributes?.brightness as number) ?? 0) / 255) * 100)
-                      : 0;
+                    const rawBrightness = (l.attributes?.brightness as number) ?? 0;
+                    const level = Math.round((rawBrightness / 255) * 100);
                     return (
                       <DeviceCard
                         key={l.entity_id}
                         icon={Lightbulb}
                         name={friendly(l)}
                         on={on}
-                        level={level}
+                        level={on ? level : 0}
                         onToggle={() => toggleOne(l.entity_id, on)}
                         onLevelChange={(v) => setLevel(l.entity_id, v)}
                       />
