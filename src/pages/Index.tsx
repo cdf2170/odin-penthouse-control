@@ -119,10 +119,10 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
         <Label>Entities</Label>
         <span className="mono text-[11px] text-foreground-dim num">{entityCount}</span>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Label>Operator</Label>
-        <span className="mono text-[11px] text-foreground-dim truncate max-w-[120px]">
-          {user?.email ?? "—"}
+        <span className="mono text-[11px] text-foreground-dim truncate text-right">
+          Chris Farrell
         </span>
       </div>
       <button
