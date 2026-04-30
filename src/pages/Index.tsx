@@ -785,25 +785,123 @@ const Voice = () => {
   );
 };
 
+const SCENE_PREFS_KEY = "odin.residenceScenes.v1";
+type ScenePrefs = { enabled: boolean; selected: string[] };
+
+const loadScenePrefs = (): ScenePrefs => {
+  try {
+    const raw = localStorage.getItem(SCENE_PREFS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { enabled: true, selected: [] };
+};
+
 const GlobalScenes = () => {
   const { scenes: allScenes } = useDiscovery();
   const { callService } = useHa();
-  const top = allScenes.slice(0, 7);
+  const [prefs, setPrefs] = useState<ScenePrefs>(loadScenePrefs);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem(SCENE_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+  }, [prefs]);
+
+  // Initialize selection on first load if empty
+  useEffect(() => {
+    if (prefs.selected.length === 0 && allScenes.length > 0) {
+      setPrefs((p) => ({ ...p, selected: allScenes.slice(0, 6).map((s) => s.entity_id) }));
+    }
+  }, [allScenes.length]);
+
+  const visible = useMemo(
+    () => allScenes.filter((s) => prefs.selected.includes(s.entity_id)),
+    [allScenes, prefs.selected],
+  );
+
+  if (!prefs.enabled && !editing) {
+    return (
+      <Panel accent>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Residence Scenes</Label>
+            <div className="text-[13px] text-foreground-dim mt-1.5">Hidden · enable to show shortcuts</div>
+          </div>
+          <button
+            onClick={() => setPrefs((p) => ({ ...p, enabled: true }))}
+            className="btn-tactile px-3 py-1.5 text-[11px] tracking-[0.14em] uppercase text-foreground-dim flex items-center gap-2"
+          >
+            <Eye className="w-3 h-3" strokeWidth={1.5} /> Enable
+          </button>
+        </div>
+      </Panel>
+    );
+  }
+
   return (
     <Panel accent>
       <div className="flex items-start justify-between mb-5">
         <div>
           <Label>Residence Scenes</Label>
-          <div className="text-[16px] font-medium mt-2 tracking-[0.04em]">{top.length} available</div>
-          <div className="text-[12px] text-foreground-dim mt-1">Tap to engage · live via Home Assistant</div>
+          <div className="text-[16px] font-medium mt-2 tracking-[0.04em]">
+            {editing ? `${prefs.selected.length} selected` : `${visible.length} pinned`}
+          </div>
+          <div className="text-[12px] text-foreground-dim mt-1">
+            {editing ? "Tap to pin / unpin · live via Home Assistant" : "Tap to engage · pin your favorites"}
+          </div>
         </div>
-        <Power className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
+        <div className="flex items-center gap-1.5">
+          {editing && (
+            <button
+              onClick={() => setPrefs((p) => ({ ...p, enabled: !p.enabled }))}
+              className="btn-tactile px-2.5 py-1.5 text-[10px] tracking-[0.14em] uppercase text-foreground-dim flex items-center gap-1.5"
+              title={prefs.enabled ? "Hide widget" : "Show widget"}
+            >
+              {prefs.enabled ? <EyeOff className="w-3 h-3" strokeWidth={1.5} /> : <Eye className="w-3 h-3" strokeWidth={1.5} />}
+              {prefs.enabled ? "Disable" : "Enable"}
+            </button>
+          )}
+          <button
+            onClick={() => setEditing((e) => !e)}
+            className={`btn-tactile px-2.5 py-1.5 text-[10px] tracking-[0.14em] uppercase flex items-center gap-1.5 ${editing ? "active" : "text-foreground-dim"}`}
+          >
+            {editing ? <Check className="w-3 h-3" strokeWidth={1.5} /> : <Pencil className="w-3 h-3" strokeWidth={1.5} />}
+            {editing ? "Done" : "Edit"}
+          </button>
+        </div>
       </div>
-      {top.length === 0 ? (
-        <div className="text-[12px] text-foreground-mute">No global scenes found</div>
+
+      {editing ? (
+        allScenes.length === 0 ? (
+          <div className="text-[12px] text-foreground-mute">No scenes found</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 max-h-[260px] overflow-auto pr-1">
+            {allScenes.map((s) => {
+              const picked = prefs.selected.includes(s.entity_id);
+              return (
+                <button
+                  key={s.entity_id}
+                  onClick={() =>
+                    setPrefs((p) => ({
+                      ...p,
+                      selected: picked
+                        ? p.selected.filter((e) => e !== s.entity_id)
+                        : [...p.selected, s.entity_id],
+                    }))
+                  }
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left text-[12px] border transition-colors ${picked ? "border-odin-accent text-foreground bg-surface-raised" : "border-hairline text-foreground-dim hover:border-hairline-strong"}`}
+                >
+                  <span className="truncate">{friendly(s)}</span>
+                  {picked && <Check className="w-3 h-3 text-odin-accent shrink-0" strokeWidth={2} />}
+                </button>
+              );
+            })}
+          </div>
+        )
+      ) : visible.length === 0 ? (
+        <div className="text-[12px] text-foreground-mute">No scenes pinned · tap Edit to add</div>
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          {top.map((s) => (
+          {visible.map((s) => (
             <TactileButton
               key={s.entity_id}
               onClick={() => callService("scene", "turn_on", { entity_id: s.entity_id })}
