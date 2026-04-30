@@ -35,7 +35,12 @@ const Ctx = createContext<HaCtx>({
 });
 
 async function invokeProxy(body: Record<string, unknown>) {
-  const { data, error } = await supabase.functions.invoke("ha-proxy", { body });
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("Not authenticated");
+  const { data, error } = await supabase.functions.invoke("ha-proxy", {
+    body,
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
   if (error) throw error;
   return data;
 }
@@ -51,7 +56,12 @@ export const HaProvider = ({ children }: { children: ReactNode }) => {
   const connect = useCallback(async () => {
     setError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("ha-token", { body: {} });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+      const { data, error } = await supabase.functions.invoke("ha-token", {
+        body: {},
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (error) throw error;
       const { ws_url, access_token } = data as { ws_url: string; access_token: string };
 
