@@ -26,9 +26,12 @@ export default function Auth() {
     setErr(null);
     setBusy(true);
     try {
+      // Persist preference so the auth client can pick the right storage on next boot
+      localStorage.setItem("odin.stay_logged_in", String(stayLoggedIn));
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
+          password,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
