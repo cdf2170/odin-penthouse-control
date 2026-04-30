@@ -118,7 +118,7 @@ export function useDiscovery() {
       "Living Room",
       "Bedroom",
       "Kitchen",
-      "Second Floor Bathroom",
+      "Upstairs Bathroom",
       "Bathroom",
       "Office",
     ];
