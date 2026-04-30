@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fan, Fingerprint,
+  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, Wind, Car, X, Pencil, EyeOff, Eye, Check
@@ -1182,7 +1182,7 @@ const AirPurifierQuickCard = () => {
 /* ——— Quick Controls section ——— */
 
 const QuickControls = () => {
-  const { rooms, bedroomFan, garageCover, airPurifier, lights } = useDiscovery();
+  const { rooms, garageCover, airPurifier, lights } = useDiscovery();
   const { callService } = useHa();
 
   // Fallback matcher in case the room bundle missed (e.g. friendly_name based grouping)
