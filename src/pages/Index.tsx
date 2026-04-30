@@ -322,7 +322,7 @@ const DeviceCard = ({
       {onLevelChange && (
         <div className="mt-5">
           <Slider
-            value={[on ? level ?? 0 : 0]}
+            value={[level ?? 0]}
             min={0}
             max={100}
             step={1}
