@@ -34,6 +34,7 @@ export const haMap = {
       },
       occupancy: "binary_sensor.bedroom_motion",
       media_player: "media_player.sonos_bedroom",
+    },
     Bathroom: {
       lights: ["light.bathroom_lightstrip"],
       scenes: {},
