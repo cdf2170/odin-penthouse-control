@@ -25,6 +25,8 @@ const ROOM_ALIASES: Record<string, string[]> = {
     "bathroom2",
     "bath2",
     "bathroomupstairs",
+    "bathroom",
+    "bathroomlightstrip",
   ],
   "Living Room": ["livingroom", "living", "lounge", "familyroom"],
   "Bedroom": ["bedroom", "masterbedroom", "primarybedroom"],
@@ -119,7 +121,6 @@ export function useDiscovery() {
       "Bedroom",
       "Kitchen",
       "Upstairs Bathroom",
-      "Bathroom",
       "Office",
     ];
 
