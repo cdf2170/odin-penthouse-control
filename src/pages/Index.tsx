@@ -784,10 +784,20 @@ const RoomDetailsTray = ({
   );
 };
 
+const TV_ENTITY_ID = "media_player.tcl_smart_tv";
+
 const NowPlaying = () => {
   const { mediaPlayers } = useDiscovery();
-  const { callService } = useHa();
-  const playing = mediaPlayers.find((m) => m.state === "playing") ?? mediaPlayers[0];
+  const { states, callService } = useHa();
+  const [showSources, setShowSources] = useState(false);
+
+  // Prefer the configured TV entity; fall back to anything currently playing, then first available.
+  const tv = states[TV_ENTITY_ID];
+  const playing =
+    tv ??
+    mediaPlayers.find((m) => m.state === "playing") ??
+    mediaPlayers[0];
+
   if (!playing) {
     return (
       <Panel>
@@ -796,59 +806,183 @@ const NowPlaying = () => {
       </Panel>
     );
   }
+
   const a = playing.attributes ?? {};
   const vol = Math.round(((a.volume_level as number) ?? 0) * 100);
+  const muted = (a.is_volume_muted as boolean) ?? false;
   const isPlaying = playing.state === "playing";
+  const isOff = playing.state === "off" || playing.state === "standby" || playing.state === "unavailable";
+  const isTv = playing.entity_id === TV_ENTITY_ID || (a.device_class as string) === "tv";
+  const sources = (a.source_list as string[] | undefined) ?? [];
+  const currentSource = (a.source as string | undefined) ?? (a.app_name as string | undefined);
+  const supportedFeatures = (a.supported_features as number) ?? 0;
+  // Bitmask helpers (HA media_player feature flags)
+  const SUPPORT_PAUSE = 1, SUPPORT_PLAY = 16384, SUPPORT_STOP = 4096,
+        SUPPORT_PREV = 16, SUPPORT_NEXT = 32, SUPPORT_TURN_ON = 128,
+        SUPPORT_TURN_OFF = 256, SUPPORT_VOL_SET = 4, SUPPORT_VOL_STEP = 1024,
+        SUPPORT_VOL_MUTE = 8, SUPPORT_SELECT_SOURCE = 2048;
+  const has = (f: number) => (supportedFeatures & f) === f;
+
+  const svc = (service: string, data: Record<string, unknown> = {}) =>
+    callService("media_player", service, { entity_id: playing.entity_id, ...data });
+  const remote = (command: string) =>
+    callService("remote", "send_command", { entity_id: "remote.tcl_smart_tv", command });
+
+  const title =
+    (a.media_title as string) ??
+    (a.app_name as string) ??
+    currentSource ??
+    (isOff ? "Off" : "Idle");
+  const subtitle =
+    (a.media_artist as string) ??
+    (a.media_series_title as string) ??
+    (a.app_name as string && a.media_title ? (a.app_name as string) : undefined) ??
+    (currentSource && title !== currentSource ? currentSource : "");
+
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
-        <Label>Now Playing · {friendly(playing)}</Label>
+        <Label>{isTv ? "TV · " : "Now Playing · "}{friendly(playing)}</Label>
         <span className="mono text-[10px] text-odin-accent uppercase">{playing.state}</span>
       </div>
+
       <div className="flex items-center gap-4 mb-5">
         <div className="w-16 h-16 bg-surface-inset border border-hairline-strong shrink-0 relative overflow-hidden">
           {a.entity_picture ? (
             <img src={a.entity_picture as string} alt="" className="w-full h-full object-cover" />
+          ) : isTv ? (
+            <div className="absolute inset-0 grid place-items-center">
+              <Tv className="w-6 h-6 text-foreground-mute" strokeWidth={1.25} />
+            </div>
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(28 60% 35%), hsl(220 30% 12%))" }} />
           )}
           <div className="absolute inset-0 scanline" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-medium truncate">{(a.media_title as string) ?? "—"}</div>
-          <div className="text-[12px] text-foreground-dim truncate">{(a.media_artist as string) ?? ""}</div>
+          <div className="text-[14px] font-medium truncate">{title}</div>
+          <div className="text-[12px] text-foreground-dim truncate">{subtitle}</div>
         </div>
+        {(has(SUPPORT_TURN_ON) || has(SUPPORT_TURN_OFF)) && (
+          <button
+            onClick={() => svc(isOff ? "turn_on" : "turn_off")}
+            className={`w-9 h-9 grid place-items-center btn-tactile ${!isOff ? "active" : ""}`}
+            title={isOff ? "Turn on" : "Turn off"}
+          >
+            <Power className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        )}
       </div>
-      <div className="flex items-center justify-between mt-4">
+
+      {/* Transport + volume */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <button onClick={() => callService("media_player", "media_previous_track", { entity_id: playing.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
-            <SkipBack className="w-4 h-4" strokeWidth={1.5} />
-          </button>
-          <button onClick={() => callService("media_player", "media_play_pause", { entity_id: playing.entity_id })} className={`w-10 h-10 grid place-items-center btn-tactile ${isPlaying ? "active" : ""}`}>
-            {isPlaying ? <Pause className="w-4 h-4" strokeWidth={1.5} /> : <Play className="w-4 h-4" strokeWidth={1.5} />}
-          </button>
-          <button onClick={() => callService("media_player", "media_next_track", { entity_id: playing.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
-            <SkipForward className="w-4 h-4" strokeWidth={1.5} />
-          </button>
+          {has(SUPPORT_PREV) && (
+            <button onClick={() => svc("media_previous_track")} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
+              <SkipBack className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+          )}
+          {(has(SUPPORT_PLAY) || has(SUPPORT_PAUSE)) && (
+            <button onClick={() => svc("media_play_pause")} className={`w-10 h-10 grid place-items-center btn-tactile ${isPlaying ? "active" : ""}`}>
+              {isPlaying ? <Pause className="w-4 h-4" strokeWidth={1.5} /> : <Play className="w-4 h-4" strokeWidth={1.5} />}
+            </button>
+          )}
+          {has(SUPPORT_NEXT) && (
+            <button onClick={() => svc("media_next_track")} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
+              <SkipForward className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-3 flex-1 ml-6">
-          <Volume2 className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
-          <Slider
-            value={[vol]}
-            min={0}
-            max={100}
-            step={1}
-            onValueChange={(v) =>
-              callService("media_player", "volume_set", {
-                entity_id: playing.entity_id,
-                volume_level: v[0] / 100,
-              })
-            }
-            className="flex-1"
-          />
-          <span className="mono text-[10px] text-foreground-dim num w-7 text-right">{vol}</span>
+
+        <div className="flex items-center gap-2 flex-1 ml-4">
+          {has(SUPPORT_VOL_MUTE) && (
+            <button
+              onClick={() => svc("volume_mute", { is_volume_muted: !muted })}
+              className="w-7 h-7 grid place-items-center text-foreground-dim hover:text-foreground transition-colors"
+              title={muted ? "Unmute" : "Mute"}
+            >
+              {muted ? <VolumeX className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Volume2 className="w-3.5 h-3.5" strokeWidth={1.5} />}
+            </button>
+          )}
+          {has(SUPPORT_VOL_STEP) && (
+            <>
+              <button onClick={() => svc("volume_down")} className="w-7 h-7 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong/60 transition-colors" title="Vol -">
+                <ChevronDown className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+              <button onClick={() => svc("volume_up")} className="w-7 h-7 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong/60 transition-colors" title="Vol +">
+                <ChevronUp className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </>
+          )}
+          {has(SUPPORT_VOL_SET) && (
+            <Slider
+              value={[vol]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(v) => svc("volume_set", { volume_level: v[0] / 100 })}
+              className="flex-1"
+            />
+          )}
+          <span className="mono text-[10px] text-foreground-dim num w-7 text-right">{muted ? "—" : vol}</span>
         </div>
       </div>
+
+      {/* TV: source picker + d-pad */}
+      {isTv && !isOff && (
+        <>
+          {has(SUPPORT_SELECT_SOURCE) && sources.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-hairline/60">
+              <button
+                onClick={() => setShowSources((s) => !s)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <span className="label">Source</span>
+                <span className="mono text-[11px] text-foreground-dim truncate max-w-[60%]">
+                  {currentSource ?? "—"} {showSources ? "▴" : "▾"}
+                </span>
+              </button>
+              {showSources && (
+                <div className="mt-2 max-h-44 overflow-y-auto grid grid-cols-2 gap-1.5">
+                  {sources.map((src) => (
+                    <button
+                      key={src}
+                      onClick={() => {
+                        svc("select_source", { source: src });
+                        setShowSources(false);
+                      }}
+                      className={`text-[12px] px-2.5 py-1.5 border border-hairline-strong/60 hover:border-odin-accent text-left truncate transition-colors ${
+                        src === currentSource ? "bg-surface-raised text-foreground" : "text-foreground-dim"
+                      }`}
+                    >
+                      {src}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-4 pt-4 border-t border-hairline/60 flex items-center justify-between gap-4">
+            <span className="label">Remote</span>
+            <div className="grid grid-cols-3 grid-rows-3 gap-1 w-[108px]">
+              <div />
+              <button onClick={() => remote("DPAD_UP")} className="w-8 h-8 grid place-items-center btn-tactile"><ChevronUp className="w-4 h-4" strokeWidth={1.5} /></button>
+              <div />
+              <button onClick={() => remote("DPAD_LEFT")} className="w-8 h-8 grid place-items-center btn-tactile"><ChevronLeft className="w-4 h-4" strokeWidth={1.5} /></button>
+              <button onClick={() => remote("DPAD_CENTER")} className="w-8 h-8 grid place-items-center btn-tactile active"><CornerDownLeft className="w-3.5 h-3.5" strokeWidth={1.5} /></button>
+              <button onClick={() => remote("DPAD_RIGHT")} className="w-8 h-8 grid place-items-center btn-tactile"><ChevronRight className="w-4 h-4" strokeWidth={1.5} /></button>
+              <div />
+              <button onClick={() => remote("DPAD_DOWN")} className="w-8 h-8 grid place-items-center btn-tactile"><ChevronDown className="w-4 h-4" strokeWidth={1.5} /></button>
+              <div />
+            </div>
+            <div className="flex flex-col gap-1">
+              <button onClick={() => remote("BACK")} className="px-2.5 h-8 grid place-items-center btn-tactile text-[10px] tracking-[0.15em]"><ArrowLeft className="w-3.5 h-3.5 mr-1" strokeWidth={1.5} />BACK</button>
+              <button onClick={() => remote("HOME")} className="px-2.5 h-8 grid place-items-center btn-tactile text-[10px] tracking-[0.15em]"><Home className="w-3.5 h-3.5 mr-1" strokeWidth={1.5} />HOME</button>
+            </div>
+          </div>
+        </>
+      )}
     </Panel>
   );
 };
