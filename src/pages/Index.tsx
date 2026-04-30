@@ -978,6 +978,205 @@ const ActivityLog = () => {
   );
 };
 
+/* ——— Quick Controls grid (one-tap tiles, themed to ODIN) ——— */
+
+type Tone = "amber" | "ok" | "alert" | "neutral";
+
+const QuickTile = ({
+  icon: Icon,
+  label,
+  status,
+  active,
+  tone = "amber",
+  onClick,
+  disabled,
+}: {
+  icon: any;
+  label: string;
+  status: string;
+  active?: boolean;
+  tone?: Tone;
+  onClick?: () => void;
+  disabled?: boolean;
+}) => {
+  const toneCls = {
+    amber: "border-odin-accent/70 text-foreground",
+    ok: "border-odin-ok/70 text-foreground",
+    alert: "border-odin-alert/70 text-foreground",
+    neutral: "border-hairline-strong text-foreground",
+  }[tone];
+  const iconCls = active
+    ? {
+        amber: "text-odin-accent",
+        ok: "text-odin-ok",
+        alert: "text-odin-alert",
+        neutral: "text-foreground",
+      }[tone]
+    : "text-foreground-mute";
+  const glow = active
+    ? {
+        amber: "0 0 24px hsl(var(--accent) / 0.18) inset",
+        ok: "0 0 24px hsl(var(--ok) / 0.18) inset",
+        alert: "0 0 24px hsl(var(--alert) / 0.18) inset",
+        neutral: "none",
+      }[tone]
+    : "none";
+  const bg = active
+    ? {
+        amber: "linear-gradient(180deg, hsl(32 88% 58% / 0.06), hsl(32 88% 58% / 0.02))",
+        ok: "linear-gradient(180deg, hsl(152 40% 48% / 0.06), hsl(152 40% 48% / 0.02))",
+        alert: "linear-gradient(180deg, hsl(358 70% 56% / 0.06), hsl(358 70% 56% / 0.02))",
+        neutral: "var(--grad-panel)",
+      }[tone]
+    : "var(--grad-panel)";
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`panel p-4 flex flex-col items-center justify-center gap-2 min-h-[120px] transition-colors disabled:opacity-40 ${active ? toneCls : "hover:border-hairline-strong"}`}
+      style={{ background: bg, boxShadow: glow }}
+    >
+      <Icon className={`w-6 h-6 transition-colors ${iconCls}`} strokeWidth={1.25} />
+      <div className="text-[12px] font-medium tracking-[0.04em] mt-1">{label}</div>
+      <div className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em] num">
+        {status}
+      </div>
+    </button>
+  );
+};
+
+const QuickControls = () => {
+  const { rooms, garageCover, airPurifier, lights } = useDiscovery();
+  const { callService } = useHa();
+
+  const roomTile = (name: string, icon: any) => {
+    const r = rooms.find((x) => x.room === name);
+    if (!r || r.lights.length === 0) return null;
+    const onLights = r.lights.filter(isOn);
+    const active = onLights.length > 0;
+    const totalBrightness = onLights.reduce(
+      (acc, l) => acc + ((l.attributes?.brightness as number) ?? 0),
+      0,
+    );
+    const avgLevel = onLights.length
+      ? Math.round((totalBrightness / onLights.length / 255) * 100)
+      : 0;
+    return (
+      <QuickTile
+        key={name}
+        icon={icon}
+        label={name}
+        status={active ? `${avgLevel}%` : "Off"}
+        active={active}
+        tone="amber"
+        onClick={() =>
+          callService("light", active ? "turn_off" : "turn_on", {
+            entity_id: r.lights.map((l) => l.entity_id),
+          })
+        }
+      />
+    );
+  };
+
+  // Garage tile
+  const garage = garageCover
+    ? (() => {
+        const open = garageCover.state === "open" || garageCover.state === "opening";
+        return (
+          <QuickTile
+            key="garage"
+            icon={Car}
+            label="Garage"
+            status={garageCover.state}
+            active={open}
+            tone={open ? "alert" : "neutral"}
+            onClick={() =>
+              callService("cover", open ? "close_cover" : "open_cover", {
+                entity_id: garageCover.entity_id,
+              })
+            }
+          />
+        );
+      })()
+    : null;
+
+  // Purifier — cycles Off → On → Auto → Off
+  const purifier = airPurifier
+    ? (() => {
+        const a = airPurifier.attributes ?? {};
+        const off = airPurifier.state === "off";
+        const preset = (a.preset_mode as string | undefined)?.toLowerCase();
+        const mode: "off" | "on" | "auto" = off ? "off" : preset === "auto" ? "auto" : "on";
+        const next = mode === "off" ? "on" : mode === "on" ? "auto" : "off";
+        return (
+          <QuickTile
+            key="purifier"
+            icon={Wind}
+            label="Purifier"
+            status={mode === "off" ? "Off" : mode === "auto" ? "Auto" : "On"}
+            active={mode !== "off"}
+            tone="ok"
+            onClick={() => {
+              if (next === "off") {
+                callService("fan", "turn_off", { entity_id: airPurifier.entity_id });
+              } else if (next === "auto") {
+                callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
+                callService("fan", "set_preset_mode", {
+                  entity_id: airPurifier.entity_id,
+                  preset_mode: "Auto",
+                });
+              } else {
+                callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
+              }
+            }}
+          />
+        );
+      })()
+    : null;
+
+  // All Off — kills every light
+  const anyLightOn = lights.some(isOn);
+  const allOff = (
+    <QuickTile
+      key="all-off"
+      icon={Power}
+      label="All Off"
+      status={anyLightOn ? "Lights on" : "Quiet"}
+      active={false}
+      tone="neutral"
+      disabled={!anyLightOn}
+      onClick={() =>
+        callService("light", "turn_off", {
+          entity_id: lights.filter(isOn).map((l) => l.entity_id),
+        })
+      }
+    />
+  );
+
+  const tiles = [
+    roomTile("Living Room", Lightbulb),
+    roomTile("Kitchen", Lightbulb),
+    roomTile("Bedroom", Lightbulb),
+    roomTile("Office", Lightbulb),
+    roomTile("Second Floor Bathroom", Lightbulb),
+    purifier,
+    garage,
+    allOff,
+  ].filter(Boolean);
+
+  if (tiles.length === 0) return null;
+
+  return (
+    <div>
+      <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
+      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+        {tiles}
+      </div>
+    </div>
+  );
+};
+
 const OverviewView = () => {
   const { rooms } = useDiscovery();
   const [activeRoom, setActiveRoom] = useState<RoomLive | null>(null);
@@ -991,6 +1190,7 @@ const OverviewView = () => {
   return (
     <div className="flex-1 flex min-h-0">
       <section className="flex-1 p-8 space-y-6 overflow-auto">
+        <QuickControls />
         <GlobalScenes />
         {rooms.length > 0 && (
           <div>
