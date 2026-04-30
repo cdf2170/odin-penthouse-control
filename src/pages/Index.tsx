@@ -195,7 +195,6 @@ const RoomPanel = ({
   accent?: boolean;
   onOpenDetails: () => void;
 }) => {
-  const { callService } = useHa();
   const onLights = room.lights.filter(isOn);
   const totalBrightness = onLights.reduce(
     (acc, l) => acc + ((l.attributes?.brightness as number) ?? 0),
@@ -208,58 +207,57 @@ const RoomPanel = ({
   const playing = room.mediaPlayer?.state === "playing";
   const anyOn = onLights.length > 0;
 
-  const toggleAll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (room.lights.length === 0) return;
-    callService("light", anyOn ? "turn_off" : "turn_on", {
-      entity_id: room.lights.map((l) => l.entity_id),
-    });
-  };
+  // Build a minimal stat line — only show what's actually happening
+  const stats: string[] = [];
+  if (anyOn) stats.push(`${onLights.length} light${onLights.length === 1 ? "" : "s"} on`);
+  if (playing) stats.push("Audio");
+  if (room.scenes.length > 0) stats.push(`${room.scenes.length} scenes`);
+  const idleLabel = room.lights.length === 0 ? "No fixtures" : "Quiet";
 
   return (
-    <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors hover:border-hairline-strong`}>
-      <div className="flex items-start justify-between mb-5">
-        <div className="min-w-0">
+    <button
+      onClick={onOpenDetails}
+      aria-label={`Open ${room.room} controls`}
+      className={`panel ${accent ? "panel-accent" : ""} p-5 text-left w-full transition-colors hover:border-hairline-strong group`}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-medium tracking-[0.04em] truncate">{room.room}</h3>
             <StatusDot state={occupied ? "active" : "idle"} />
           </div>
-          <div className="label mt-1.5">
-            {occupied ? "Occupied" : "Vacant"} · {onLights.length}/{room.lights.length} fixtures
-            {playing ? " · Audio" : ""}
+          <div className="label mt-1.5 truncate">
+            {occupied ? "Occupied" : "Vacant"}
           </div>
         </div>
-        <button
-          onClick={onOpenDetails}
-          className="flex items-center gap-1.5 text-foreground-mute hover:text-odin-accent transition-colors shrink-0"
-          aria-label={`Open ${room.room} details`}
-        >
-          <span className="mono text-[10px] uppercase tracking-[0.14em]">Details</span>
-          <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
-        </button>
+        <ChevronRight
+          className="w-4 h-4 text-foreground-mute group-hover:text-odin-accent transition-colors shrink-0 mt-0.5"
+          strokeWidth={1.5}
+        />
       </div>
 
-      <button
-        onClick={toggleAll}
-        disabled={room.lights.length === 0}
-        className={`btn-tactile w-full px-3 py-2.5 text-[11px] tracking-[0.14em] uppercase flex items-center justify-center gap-2 mb-3 ${anyOn ? "active" : "text-foreground-dim"} disabled:opacity-40`}
-      >
-        <Power className="w-3.5 h-3.5" strokeWidth={1.5} />
-        {room.lights.length === 0 ? "No lights" : anyOn ? "All On · Tap to Off" : "All Off · Tap to On"}
-      </button>
-
-      <div className="h-1 bg-surface-inset relative overflow-hidden">
-        <div className="h-full transition-[width] duration-300" style={{
-          width: `${avgLevel}%`,
-          background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-          boxShadow: avgLevel > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
-        }} />
+      {/* Minimal stat row — just enough to surface what's happening */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="mono text-[10px] uppercase tracking-[0.14em] text-foreground-mute truncate">
+          {stats.length > 0 ? stats.join(" · ") : idleLabel}
+        </div>
+        {anyOn && (
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-16 h-[3px] bg-surface-inset relative overflow-hidden">
+              <div
+                className="h-full transition-[width] duration-300"
+                style={{
+                  width: `${avgLevel}%`,
+                  background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+                  boxShadow: avgLevel > 0 ? "0 0 8px hsl(var(--accent) / 0.5)" : "none",
+                }}
+              />
+            </div>
+            <span className="mono text-[10px] text-odin-accent num w-8 text-right">{avgLevel}%</span>
+          </div>
+        )}
       </div>
-      <div className="flex items-center justify-between mt-1.5">
-        <span className="label">Avg Brightness</span>
-        <span className="mono text-[10px] text-foreground-dim num">{avgLevel}%</span>
-      </div>
-    </div>
+    </button>
   );
 };
 
