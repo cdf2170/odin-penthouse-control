@@ -341,7 +341,7 @@ const RoomDetailsTray = ({
   room: RoomLive | null;
   onClose: () => void;
 }) => {
-  const { callService } = useHa();
+  const { callService, states } = useHa();
   if (!room) return null;
 
   const onLights = room.lights.filter(isOn);
@@ -531,76 +531,149 @@ const RoomDetailsTray = ({
             )}
 
             {/* Other devices */}
-            {(room.switches.length > 0 ||
-              room.fans.length > 0 ||
-              room.covers.length > 0) && (
-              <section>
-                <div className="flex items-baseline justify-between mb-5">
-                  <Label>Other Devices</Label>
-                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
-                    {room.switches.length + room.fans.length + room.covers.length} items
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {room.switches.map((s) => {
-                    const on = s.state === "on";
-                    return (
-                      <DeviceCard
-                        key={s.entity_id}
-                        icon={Power}
-                        name={friendly(s)}
-                        on={on}
-                        onToggle={() =>
-                          callService("switch", on ? "turn_off" : "turn_on", {
-                            entity_id: s.entity_id,
-                          })
-                        }
-                      />
-                    );
-                  })}
-                  {room.fans.map((f) => {
-                    const on = f.state === "on";
-                    const pct = (f.attributes?.percentage as number | undefined) ?? (on ? 100 : 0);
-                    return (
-                      <DeviceCard
-                        key={f.entity_id}
-                        icon={Wind}
-                        name={friendly(f)}
-                        on={on}
-                        level={pct}
-                        onToggle={() =>
-                          callService("fan", on ? "turn_off" : "turn_on", {
-                            entity_id: f.entity_id,
-                          })
-                        }
-                        onLevelChange={(v) =>
-                          callService("fan", "set_percentage", {
-                            entity_id: f.entity_id,
-                            percentage: v,
-                          })
-                        }
-                      />
-                    );
-                  })}
-                  {room.covers.map((c) => {
-                    const open = c.state === "open" || c.state === "opening";
-                    return (
-                      <DeviceCard
-                        key={c.entity_id}
-                        icon={DoorClosed}
-                        name={friendly(c)}
-                        on={open}
-                        onToggle={() =>
-                          callService("cover", open ? "close_cover" : "open_cover", {
-                            entity_id: c.entity_id,
-                          })
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+            {(() => {
+              const isBedroom = room.room === "Bedroom";
+              const fans = isBedroom
+                ? []
+                : room.fans;
+              const switches = isBedroom
+                ? []
+                : room.switches;
+              const covers = isBedroom ? [] : room.covers;
+
+              // Bedroom: only show Bedroom Fan (switch) + Bedroom Speaker (media_player w/ volume)
+              const bedroomFanSwitch = isBedroom
+                ? states["switch.bedroom_fan_smart_plug"]
+                : undefined;
+              const bedroomSpeaker = isBedroom
+                ? states["media_player.bedroom"]
+                : undefined;
+
+              const total =
+                switches.length +
+                fans.length +
+                covers.length +
+                (bedroomFanSwitch ? 1 : 0) +
+                (bedroomSpeaker ? 1 : 0);
+
+              if (total === 0) return null;
+
+              return (
+                <section>
+                  <div className="flex items-baseline justify-between mb-5">
+                    <Label>Other Devices</Label>
+                    <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                      {total} items
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {switches.map((s) => {
+                      const on = s.state === "on";
+                      return (
+                        <DeviceCard
+                          key={s.entity_id}
+                          icon={Power}
+                          name={friendly(s)}
+                          on={on}
+                          onToggle={() =>
+                            callService("switch", on ? "turn_off" : "turn_on", {
+                              entity_id: s.entity_id,
+                            })
+                          }
+                        />
+                      );
+                    })}
+                    {fans.map((f) => {
+                      const on = f.state === "on";
+                      const pct = (f.attributes?.percentage as number | undefined) ?? (on ? 100 : 0);
+                      return (
+                        <DeviceCard
+                          key={f.entity_id}
+                          icon={Wind}
+                          name={friendly(f)}
+                          on={on}
+                          level={pct}
+                          onToggle={() =>
+                            callService("fan", on ? "turn_off" : "turn_on", {
+                              entity_id: f.entity_id,
+                            })
+                          }
+                          onLevelChange={(v) =>
+                            callService("fan", "set_percentage", {
+                              entity_id: f.entity_id,
+                              percentage: v,
+                            })
+                          }
+                        />
+                      );
+                    })}
+                    {covers.map((c) => {
+                      const open = c.state === "open" || c.state === "opening";
+                      return (
+                        <DeviceCard
+                          key={c.entity_id}
+                          icon={DoorClosed}
+                          name={friendly(c)}
+                          on={open}
+                          onToggle={() =>
+                            callService("cover", open ? "close_cover" : "open_cover", {
+                              entity_id: c.entity_id,
+                            })
+                          }
+                        />
+                      );
+                    })}
+                    {bedroomFanSwitch && (() => {
+                      const on = bedroomFanSwitch.state === "on";
+                      return (
+                        <DeviceCard
+                          key={bedroomFanSwitch.entity_id}
+                          icon={Wind}
+                          name="Bedroom Fan"
+                          on={on}
+                          onToggle={() =>
+                            callService("switch", on ? "turn_off" : "turn_on", {
+                              entity_id: bedroomFanSwitch.entity_id,
+                            })
+                          }
+                        />
+                      );
+                    })()}
+                    {bedroomSpeaker && (() => {
+                      const on =
+                        bedroomSpeaker.state !== "off" &&
+                        bedroomSpeaker.state !== "unavailable" &&
+                        bedroomSpeaker.state !== "standby";
+                      const vol = Math.round(
+                        ((bedroomSpeaker.attributes?.volume_level as number) ?? 0) * 100,
+                      );
+                      return (
+                        <DeviceCard
+                          key={bedroomSpeaker.entity_id}
+                          icon={Volume2}
+                          name="Bedroom Speaker"
+                          on={on}
+                          level={vol}
+                          onToggle={() =>
+                            callService(
+                              "media_player",
+                              on ? "turn_off" : "turn_on",
+                              { entity_id: bedroomSpeaker.entity_id },
+                            )
+                          }
+                          onLevelChange={(v) =>
+                            callService("media_player", "volume_set", {
+                              entity_id: bedroomSpeaker.entity_id,
+                              volume_level: v / 100,
+                            })
+                          }
+                        />
+                      );
+                    })()}
+                  </div>
+                </section>
+              );
+            })()}
 
             {/* Audio — premium media card */}
             {mp && (
