@@ -1,38 +1,23 @@
 import { useEffect, useState } from "react";
 import {
-  Activity, AirVent, Bell, ChevronRight, DoorClosed, Fingerprint, Flame,
-  Gauge, Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
+  Activity, Bell, ChevronRight, DoorClosed, Fingerprint,
+  Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, Wind, Car
 } from "lucide-react";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
+import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
+import LightingView from "@/components/odin/views/LightingView";
+import ClimateView from "@/components/odin/views/ClimateView";
+import SecurityView from "@/components/odin/views/SecurityView";
+import AudioView from "@/components/odin/views/AudioView";
+import CamerasView from "@/components/odin/views/CamerasView";
+import VoiceView from "@/components/odin/views/VoiceView";
 
-/* ——— atomic primitives ——— */
+type ViewKey = "Overview" | "Lighting" | "Climate" | "Security" | "Audio" | "Cameras" | "Voice";
 
-const Hairline = ({ className = "" }: { className?: string }) => (
-  <div className={`h-px w-full bg-hairline ${className}`} />
-);
-
-const Label = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <span className={`label ${className}`}>{children}</span>
-);
-
-const StatusDot = ({
-  state = "idle",
-}: { state?: "active" | "idle" | "alert" | "ok" }) => {
-  const color = {
-    active: "text-odin-accent",
-    idle: "text-odin-idle",
-    alert: "text-odin-alert",
-    ok: "text-odin-ok",
-  }[state];
-  return <span className={`dot ${color}`} />;
-};
-
-/* ——— left rail ——— */
-
-const navItems = [
-  { icon: Home, label: "Overview", active: true },
+const navItems: { icon: any; label: ViewKey }[] = [
+  { icon: Home, label: "Overview" },
   { icon: Lightbulb, label: "Lighting" },
   { icon: Thermometer, label: "Climate" },
   { icon: Shield, label: "Security" },
@@ -41,7 +26,7 @@ const navItems = [
   { icon: Mic, label: "Voice" },
 ];
 
-const LeftRail = () => (
+const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => (
   <aside className="w-[232px] shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
     <div className="px-6 pt-7 pb-8">
       <div className="flex items-center gap-2.5">
@@ -60,21 +45,25 @@ const LeftRail = () => (
     <nav className="px-3 py-4 flex-1">
       <Label className="px-3 mb-3 block">Control</Label>
       <ul className="space-y-px">
-        {navItems.map((it) => (
-          <li key={it.label}>
-            <button
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
-                it.active
-                  ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
-                  : "text-foreground-dim hover:text-foreground hover:bg-surface-raised/40"
-              }`}
-            >
-              <it.icon className="w-4 h-4" strokeWidth={1.5} />
-              <span className="tracking-wide">{it.label}</span>
-              {it.active && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-60" />}
-            </button>
-          </li>
-        ))}
+        {navItems.map((it) => {
+          const active = view === it.label;
+          return (
+            <li key={it.label}>
+              <button
+                onClick={() => setView(it.label)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
+                  active
+                    ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
+                    : "text-foreground-dim hover:text-foreground hover:bg-surface-raised/40"
+                }`}
+              >
+                <it.icon className="w-4 h-4" strokeWidth={1.5} />
+                <span className="tracking-wide">{it.label}</span>
+                {active && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-60" />}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       <Label className="px-3 mt-8 mb-3 block">System</Label>
@@ -114,15 +103,13 @@ const LeftRail = () => (
   </aside>
 );
 
-/* ——— top bar ——— */
-
-const TopBar = ({ now }: { now: Date }) => {
+const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
   const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
   const date = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   return (
     <header className="h-16 border-b border-hairline px-8 flex items-center justify-between bg-surface-inset/40">
       <div className="flex items-baseline gap-6">
-        <h1 className="text-[18px] font-medium tracking-[0.04em]">Overview</h1>
+        <h1 className="text-[18px] font-medium tracking-[0.04em]">{view}</h1>
         <span className="text-[12px] text-foreground-mute uppercase tracking-[0.18em]">All Systems Nominal</span>
       </div>
       <div className="flex items-center gap-8">
@@ -142,40 +129,29 @@ const TopBar = ({ now }: { now: Date }) => {
   );
 };
 
-/* ——— scenes (global) ——— */
+/* ——— Overview-only widgets ——— */
 
 const scenes = ["Welcome", "Entertain", "Dine", "Cinema", "Evening", "Goodnight", "Away"];
+
 const RoomScenes = ({ active, options = scenes }: { active: string; options?: string[] }) => {
   const [a, setA] = useState(active);
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((s) => (
-        <button
-          key={s}
-          onClick={() => setA(s)}
-          className={`btn-tactile px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase ${a === s ? "active" : "text-foreground-dim"}`}
-        >
-          {s}
-        </button>
+        <TactileButton key={s} active={a === s} onClick={() => setA(s)}>{s}</TactileButton>
       ))}
     </div>
   );
 };
 
-/* ——— room panel ——— */
-
 type RoomProps = {
-  name: string;
-  temp: number;
-  occupancy: "occupied" | "vacant";
+  name: string; temp: number; occupancy: "occupied" | "vacant";
   lights: { on: number; total: number; level: number };
-  scenes?: string[];
-  activeScene: string;
-  accent?: boolean;
+  scenes?: string[]; activeScene: string; accent?: boolean;
 };
 
 const RoomPanel = ({ name, temp, occupancy, lights, scenes: rs, activeScene, accent }: RoomProps) => (
-  <div className={`panel ${accent ? "panel-accent" : ""} p-5`}>
+  <Panel accent={accent}>
     <div className="flex items-start justify-between mb-5">
       <div>
         <div className="flex items-center gap-2">
@@ -189,7 +165,6 @@ const RoomPanel = ({ name, temp, occupancy, lights, scenes: rs, activeScene, acc
         <div className="label mt-1.5">Ambient</div>
       </div>
     </div>
-
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -197,42 +172,33 @@ const RoomPanel = ({ name, temp, occupancy, lights, scenes: rs, activeScene, acc
           <span className="mono text-[11px] text-foreground-dim num">{lights.level}%</span>
         </div>
         <div className="h-1 bg-surface-inset relative overflow-hidden">
-          <div
-            className="h-full"
-            style={{
-              width: `${lights.level}%`,
-              background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-              boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
-            }}
-          />
+          <div className="h-full" style={{
+            width: `${lights.level}%`,
+            background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+            boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
+          }} />
         </div>
       </div>
-
       <div>
         <Label className="mb-2 block">Scene</Label>
         <RoomScenes active={activeScene} options={rs} />
       </div>
     </div>
-  </div>
+  </Panel>
 );
-
-/* ——— now playing (Sonos) ——— */
 
 const NowPlaying = () => {
   const [playing, setPlaying] = useState(true);
-  const [vol, setVol] = useState(38);
+  const vol = 38;
   return (
-    <div className="panel p-5">
+    <Panel>
       <div className="flex items-center justify-between mb-4">
         <Label>Now Playing · Sonos</Label>
         <span className="mono text-[10px] text-odin-accent">ARC ULTRA + ERA 100 ×2</span>
       </div>
-
       <div className="flex items-center gap-4 mb-5">
         <div className="w-16 h-16 bg-surface-inset border border-hairline-strong shrink-0 relative overflow-hidden">
-          <div className="absolute inset-0" style={{
-            background: "linear-gradient(135deg, hsl(28 60% 35%), hsl(220 30% 12%))",
-          }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(28 60% 35%), hsl(220 30% 12%))" }} />
           <div className="absolute inset-0 scanline" />
         </div>
         <div className="min-w-0 flex-1">
@@ -241,27 +207,21 @@ const NowPlaying = () => {
           <div className="mono text-[10px] text-foreground-mute mt-1.5 num">02:14 / 09:33</div>
         </div>
       </div>
-
       <div className="h-px bg-surface-inset mb-1">
         <div className="h-px bg-odin-accent" style={{ width: "24%", boxShadow: "0 0 8px hsl(var(--accent))" }} />
       </div>
-
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-1">
           <button className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
             <SkipBack className="w-4 h-4" strokeWidth={1.5} />
           </button>
-          <button
-            onClick={() => setPlaying(!playing)}
-            className="w-10 h-10 grid place-items-center btn-tactile active"
-          >
+          <button onClick={() => setPlaying(!playing)} className="w-10 h-10 grid place-items-center btn-tactile active">
             {playing ? <Pause className="w-4 h-4" strokeWidth={1.5} /> : <Play className="w-4 h-4" strokeWidth={1.5} />}
           </button>
           <button className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
             <SkipForward className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
-
         <div className="flex items-center gap-2 flex-1 ml-6">
           <Volume2 className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
           <div className="flex-1 h-px bg-surface-inset relative">
@@ -270,61 +230,46 @@ const NowPlaying = () => {
           <span className="mono text-[10px] text-foreground-dim num w-6 text-right">{vol}</span>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 };
 
-/* ——— climate (T10) ——— */
-
-const Climate = () => {
-  const setpoint = 71;
-  const current = 72;
-  return (
-    <div className="panel p-5">
-      <div className="flex items-center justify-between mb-5">
-        <Label>Climate · Resideo T10 Plus</Label>
-        <div className="flex items-center gap-2">
-          <Snowflake className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
-          <span className="mono text-[10px] text-foreground-dim">COOLING</span>
-        </div>
+const Climate = () => (
+  <Panel>
+    <div className="flex items-center justify-between mb-5">
+      <Label>Climate · Resideo T10 Plus</Label>
+      <div className="flex items-center gap-2">
+        <Snowflake className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
+        <span className="mono text-[10px] text-foreground-dim">COOLING</span>
       </div>
-
-      <div className="flex items-end gap-6 mb-6">
-        <div>
-          <div className="mono text-[44px] font-light leading-none num">{setpoint}<span className="text-[20px] text-foreground-dim">°</span></div>
-          <Label className="mt-2 block">Setpoint</Label>
-        </div>
-        <div className="pb-1">
-          <div className="mono text-[16px] num text-foreground-dim">{current}°</div>
-          <Label className="mt-1 block">Current</Label>
-        </div>
-        <div className="ml-auto pb-1 text-right">
-          <div className="mono text-[16px] num text-foreground-dim">42<span className="text-foreground-mute">%</span></div>
-          <Label className="mt-1 block">Humidity</Label>
-        </div>
+    </div>
+    <div className="flex items-end gap-6 mb-6">
+      <div>
+        <div className="mono text-[44px] font-light leading-none num">71<span className="text-[20px] text-foreground-dim">°</span></div>
+        <Label className="mt-2 block">Setpoint</Label>
       </div>
-
-      {/* zone bar */}
-      <div className="space-y-2.5">
-        {[
-          { z: "Main Level", v: 71 },
-          { z: "Upper Level", v: 70 },
-          { z: "Primary Suite", v: 69 },
-        ].map((z) => (
-          <div key={z.z} className="flex items-center gap-3">
-            <span className="text-[11px] text-foreground-dim w-28">{z.z}</span>
-            <div className="flex-1 h-px bg-surface-inset relative">
-              <div className="h-px bg-foreground-dim/60" style={{ width: `${(z.v - 60) * 5}%` }} />
-            </div>
-            <span className="mono text-[11px] num w-10 text-right">{z.v}°</span>
+      <div className="pb-1">
+        <div className="mono text-[16px] num text-foreground-dim">72°</div>
+        <Label className="mt-1 block">Current</Label>
+      </div>
+      <div className="ml-auto pb-1 text-right">
+        <div className="mono text-[16px] num text-foreground-dim">42<span className="text-foreground-mute">%</span></div>
+        <Label className="mt-1 block">Humidity</Label>
+      </div>
+    </div>
+    <div className="space-y-2.5">
+      {[{ z: "Main Level", v: 71 }, { z: "Upper Level", v: 70 }, { z: "Primary Suite", v: 69 }].map(z => (
+        <div key={z.z} className="flex items-center gap-3">
+          <span className="text-[11px] text-foreground-dim w-28">{z.z}</span>
+          <div className="flex-1 h-px bg-surface-inset relative">
+            <div className="h-px bg-foreground-dim/60" style={{ width: `${(z.v - 60) * 5}%` }} />
           </div>
-        ))}
-      </div>
+          <span className="mono text-[11px] num w-10 text-right">{z.v}°</span>
+        </div>
+      ))}
     </div>
-  );
-};
-
-/* ——— security / sensors ——— */
+  </Panel>
+);
 
 const sensors = [
   { name: "Front Door", state: "Closed", icon: DoorClosed, status: "ok" as const },
@@ -336,7 +281,7 @@ const sensors = [
 ];
 
 const Security = () => (
-  <div className="panel p-5">
+  <Panel>
     <div className="flex items-center justify-between mb-4">
       <Label>Perimeter · Aqara</Label>
       <div className="flex items-center gap-2">
@@ -354,15 +299,13 @@ const Security = () => (
         </div>
       ))}
     </div>
-  </div>
+  </Panel>
 );
-
-/* ——— garage ——— */
 
 const Garage = () => {
   const [open, setOpen] = useState(false);
   return (
-    <div className="panel p-5">
+    <Panel>
       <div className="flex items-center justify-between mb-4">
         <Label>Garage · LiftMaster / ratgdo32</Label>
         <StatusDot state={open ? "active" : "idle"} />
@@ -373,21 +316,16 @@ const Garage = () => {
           <div className="text-[14px] font-medium">Bay 01 — {open ? "Open" : "Closed"}</div>
           <div className="mono text-[10px] text-foreground-mute mt-0.5">Last: 18:42 · Vehicle present</div>
         </div>
-        <button
-          onClick={() => setOpen(!open)}
-          className={`btn-tactile px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${open ? "active" : "text-foreground-dim"}`}
-        >
+        <TactileButton active={open} onClick={() => setOpen(!open)} className="!px-4 !py-2">
           {open ? "Close" : "Open"}
-        </button>
+        </TactileButton>
       </div>
-    </div>
+    </Panel>
   );
 };
 
-/* ——— doorbell ——— */
-
 const Doorbell = () => (
-  <div className="panel overflow-hidden">
+  <Panel padding="p-0" className="overflow-hidden">
     <div className="flex items-center justify-between p-4 pb-3">
       <Label>Front Entry · Nest Doorbell</Label>
       <div className="flex items-center gap-2">
@@ -404,18 +342,16 @@ const Doorbell = () => (
       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
         <span className="mono text-[10px] text-white/70 uppercase tracking-[0.16em]">No motion · 04:12 ago</span>
         <div className="flex gap-1.5">
-          <button className="btn-tactile px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-foreground-dim">Talk</button>
-          <button className="btn-tactile px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-foreground-dim">Unlock</button>
+          <TactileButton className="!px-2.5 !py-1 !text-[10px]">Talk</TactileButton>
+          <TactileButton className="!px-2.5 !py-1 !text-[10px]">Unlock</TactileButton>
         </div>
       </div>
     </div>
-  </div>
+  </Panel>
 );
 
-/* ——— air ——— */
-
 const AirPurifier = () => (
-  <div className="panel p-5">
+  <Panel>
     <div className="flex items-center justify-between mb-4">
       <Label>Air · Primary Suite</Label>
       <div className="flex items-center gap-2">
@@ -435,15 +371,11 @@ const AirPurifier = () => (
     </div>
     <div className="flex gap-1.5">
       {["Sleep", "Auto", "Boost"].map((m, i) => (
-        <button key={m} className={`btn-tactile flex-1 py-2 text-[11px] tracking-[0.12em] uppercase ${i === 1 ? "active" : "text-foreground-dim"}`}>
-          {m}
-        </button>
+        <TactileButton key={m} active={i === 1} className="!flex-1 !py-2">{m}</TactileButton>
       ))}
     </div>
-  </div>
+  </Panel>
 );
-
-/* ——— voice satellites ——— */
 
 const Voice = () => {
   const sats = [
@@ -451,7 +383,7 @@ const Voice = () => {
     { name: "Odin Voice — Office", status: "idle" as const, state: "Standby" },
   ];
   return (
-    <div className="panel p-5">
+    <Panel>
       <div className="flex items-center justify-between mb-4">
         <Label>Voice Satellites</Label>
         <Mic className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
@@ -473,16 +405,14 @@ const Voice = () => {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 };
-
-/* ——— global scenes header ——— */
 
 const GlobalScenes = () => {
   const [active, setActive] = useState("Evening");
   return (
-    <div className="panel panel-accent p-5">
+    <Panel accent>
       <div className="flex items-start justify-between mb-5">
         <div>
           <Label>Residence Scenes</Label>
@@ -492,24 +422,64 @@ const GlobalScenes = () => {
         <Power className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {scenes.map((s) => (
-          <button
-            key={s}
-            onClick={() => setActive(s)}
-            className={`btn-tactile px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${active === s ? "active" : "text-foreground-dim"}`}
-          >
-            {s}
-          </button>
+        {scenes.map(s => (
+          <TactileButton key={s} active={active === s} onClick={() => setActive(s)} className="!px-4 !py-2">{s}</TactileButton>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 };
 
-/* ——— main ——— */
+const OverviewView = () => (
+  <div className="flex-1 flex min-h-0">
+    <section className="flex-1 p-8 space-y-6 overflow-auto">
+      <GlobalScenes />
+      <div>
+        <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <RoomPanel name="Living Room" temp={71} occupancy="occupied" lights={{ on: 6, total: 8, level: 42 }} activeScene="Evening" accent />
+          <RoomPanel name="Kitchen" temp={72} occupancy="vacant" lights={{ on: 2, total: 6, level: 18 }} activeScene="Dine" scenes={["Bright", "Cook", "Dine", "Clean", "Off"]} />
+          <RoomPanel name="Primary Bedroom" temp={69} occupancy="vacant" lights={{ on: 0, total: 5, level: 0 }} activeScene="Off" scenes={["Wake", "Read", "Relax", "Goodnight", "Off"]} />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Doorbell /><Garage />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Security /><AirPurifier />
+      </div>
+    </section>
+
+    <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
+      <Climate /><NowPlaying /><Voice />
+      <Panel>
+        <div className="flex items-center justify-between mb-3">
+          <Label>Activity</Label>
+          <Bell className="w-3 h-3 text-foreground-mute" strokeWidth={1.5} />
+        </div>
+        <ul className="space-y-2.5">
+          {[
+            { t: "18:42", e: "Garage Bay 01 closed" },
+            { t: "18:38", e: "Vehicle arrived · Driveway" },
+            { t: "18:21", e: "Scene: Evening engaged" },
+            { t: "17:55", e: "Climate setpoint → 71°" },
+            { t: "16:10", e: "Filter @ 36% — service in 21d" },
+          ].map((i, idx) => (
+            <li key={idx} className="flex gap-3 text-[12px]">
+              <span className="mono text-foreground-mute num">{i.t}</span>
+              <span className="text-foreground-dim">{i.e}</span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </aside>
+  </div>
+);
 
 const Index = () => {
   const [now, setNow] = useState(new Date());
+  const [view, setView] = useState<ViewKey>("Overview");
+
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
@@ -517,88 +487,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      <LeftRail />
-
+      <LeftRail view={view} setView={setView} />
       <main className="flex-1 flex flex-col min-w-0">
-        <TopBar now={now} />
-
-        <div className="flex-1 flex min-h-0">
-          {/* center grid */}
-          <section className="flex-1 p-8 space-y-6 overflow-auto">
-            <GlobalScenes />
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <Label>Rooms</Label>
-                <span className="mono text-[10px] text-foreground-mute">03 ZONES · GROUND FLOOR</span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <RoomPanel
-                  name="Living Room"
-                  temp={71}
-                  occupancy="occupied"
-                  lights={{ on: 6, total: 8, level: 42 }}
-                  activeScene="Evening"
-                  accent
-                />
-                <RoomPanel
-                  name="Kitchen"
-                  temp={72}
-                  occupancy="vacant"
-                  lights={{ on: 2, total: 6, level: 18 }}
-                  activeScene="Dine"
-                  scenes={["Bright", "Cook", "Dine", "Clean", "Off"]}
-                />
-                <RoomPanel
-                  name="Primary Bedroom"
-                  temp={69}
-                  occupancy="vacant"
-                  lights={{ on: 0, total: 5, level: 0 }}
-                  activeScene="Off"
-                  scenes={["Wake", "Read", "Relax", "Goodnight", "Off"]}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Doorbell />
-              <Garage />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Security />
-              <AirPurifier />
-            </div>
-          </section>
-
-          {/* right rail */}
-          <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
-            <Climate />
-            <NowPlaying />
-            <Voice />
-
-            <div className="panel p-5">
-              <div className="flex items-center justify-between mb-3">
-                <Label>Activity</Label>
-                <Bell className="w-3 h-3 text-foreground-mute" strokeWidth={1.5} />
-              </div>
-              <ul className="space-y-2.5">
-                {[
-                  { t: "18:42", e: "Garage Bay 01 closed" },
-                  { t: "18:38", e: "Vehicle arrived · Driveway" },
-                  { t: "18:21", e: "Scene: Evening engaged" },
-                  { t: "17:55", e: "Climate setpoint → 71°" },
-                  { t: "16:10", e: "Filter @ 36% — service in 21d" },
-                ].map((i, idx) => (
-                  <li key={idx} className="flex gap-3 text-[12px]">
-                    <span className="mono text-foreground-mute num">{i.t}</span>
-                    <span className="text-foreground-dim">{i.e}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </aside>
-        </div>
+        <TopBar now={now} view={view} />
+        {view === "Overview" ? <OverviewView /> : (
+          <div className="flex-1 overflow-auto p-8">
+            {view === "Lighting" && <LightingView />}
+            {view === "Climate" && <ClimateView />}
+            {view === "Security" && <SecurityView />}
+            {view === "Audio" && <AudioView />}
+            {view === "Cameras" && <CamerasView />}
+            {view === "Voice" && <VoiceView />}
+          </div>
+        )}
       </main>
     </div>
   );
