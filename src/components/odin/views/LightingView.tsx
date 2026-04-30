@@ -73,8 +73,8 @@ export default function LightingView() {
   }, [rooms, lights]);
 
   const room = effectiveRooms[activeRoomIdx] ?? effectiveRooms[0];
-  const totalOn = effectiveRooms.reduce((acc: number, r) => acc + r.lights.filter(isOn).length, 0);
-  const totalFix = effectiveRooms.reduce((acc: number, r) => acc + r.lights.length, 0);
+  const totalOn = effectiveRooms.reduce((acc, r) => acc + r.lights.filter(isOn).length, 0);
+  const totalFix = effectiveRooms.reduce((acc, r) => acc + r.lights.length, 0);
 
   if (!room) {
     return (
