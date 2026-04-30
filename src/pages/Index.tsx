@@ -1298,7 +1298,6 @@ const QuickControls = () => {
     purifierTile,
     garageTile,
     frontDoorTile,
-    fanTile,
   ].filter(Boolean);
 
   if (tiles.length === 0) return null;
