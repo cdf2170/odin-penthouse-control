@@ -5,7 +5,12 @@
 export const haMap = {
   rooms: {
     "Living Room": {
-      lights: ["light.living_room_cove", "light.living_room_pendants"],
+      lights: [
+        "light.living_room",
+        "light.living_room_lamp_1",
+        "light.living_room_lamp_2",
+        "light.living_room_signe",
+      ],
       scenes: {
         Cinema: "scene.living_room_cinema",
         Evening: "scene.living_room_evening",
@@ -16,7 +21,15 @@ export const haMap = {
       media_player: "media_player.sonos_living_room",
     },
     Kitchen: {
-      lights: ["light.kitchen_pendants", "light.kitchen_under_cabinet"],
+      lights: [
+        "light.kitchen",
+        "light.kitchen_island_1",
+        "light.kitchen_island_2",
+        "light.kitchen_cabinet_strip_1",
+        "light.kitchen_cabinet_strip_2",
+        "light.kitchen_counter_lamp_1",
+        "light.kitchen_counter_lamp_2",
+      ],
       scenes: {
         Cook: "scene.kitchen_cook",
         Dine: "scene.kitchen_dine",
@@ -26,7 +39,11 @@ export const haMap = {
       media_player: "media_player.sonos_kitchen",
     },
     Bedroom: {
-      lights: ["light.bedroom_lamps"],
+      lights: [
+        "light.bedroom",
+        "light.bedroom_lamp_1",
+        "light.bedroom_lamp_2",
+      ],
       scenes: {
         Wind_Down: "scene.bedroom_wind_down",
         Sleep: "scene.bedroom_sleep",
@@ -35,8 +52,20 @@ export const haMap = {
       occupancy: "binary_sensor.bedroom_motion",
       media_player: "media_player.sonos_bedroom",
     },
+    Office: {
+      lights: [
+        "light.office",
+        "light.office_light_strip_1",
+        "light.office_lamp_1",
+      ],
+      scenes: {},
+      occupancy: "binary_sensor.office_motion",
+    },
     Bathroom: {
-      lights: ["light.bathroom_lightstrip"],
+      lights: [
+        "light.bathroom",
+        "light.bathroom_lightstrip",
+      ],
       scenes: {},
       occupancy: "binary_sensor.bathroom_motion",
     },
