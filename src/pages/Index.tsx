@@ -1312,12 +1312,12 @@ const QuickControls = () => {
 
   // Order requested by user
   const tiles = [
-    fanTile,
-    garageTile,
-    purifierTile,
-    frontDoorTile,
     lightsTile("Kitchen", "Kitchen Lights", Lightbulb),
     lightsTile("Living Room", "Living Room Lights", Lightbulb),
+    purifierTile,
+    garageTile,
+    frontDoorTile,
+    fanTile,
   ].filter(Boolean);
 
   if (tiles.length === 0) return null;
