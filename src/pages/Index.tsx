@@ -584,7 +584,8 @@ const OverviewView = () => {
       </Panel>
     </aside>
   </div>
-);
+  );
+};
 
 const Index = () => {
   const [now, setNow] = useState(new Date());
