@@ -263,6 +263,77 @@ const RoomPanel = ({
 
 /* ——— Full room details tray (scenes + per-fixture controls + media) ——— */
 
+/* ——— Premium room drill-down (full-screen overlay) ——— */
+
+const DeviceCard = ({
+  icon: Icon,
+  name,
+  on,
+  level,
+  onToggle,
+  onLevelChange,
+  unit,
+}: {
+  icon: any;
+  name: string;
+  on: boolean;
+  level?: number; // 0-100, omit for non-dimmable
+  onToggle: () => void;
+  onLevelChange?: (pct: number) => void;
+  unit?: string;
+}) => {
+  return (
+    <div
+      className={`relative panel p-5 transition-colors ${
+        on ? "border-odin-accent/60" : "border-hairline hover:border-hairline-strong"
+      }`}
+      style={{
+        background: on
+          ? "linear-gradient(180deg, hsl(32 88% 58% / 0.05), hsl(32 88% 58% / 0.01))"
+          : "var(--grad-panel)",
+        boxShadow: on ? "0 0 32px hsl(var(--accent) / 0.10) inset" : undefined,
+      }}
+    >
+      <div className="flex items-start gap-4">
+        <button
+          onClick={onToggle}
+          aria-label={`Toggle ${name}`}
+          className={`w-11 h-11 grid place-items-center border transition-colors shrink-0 ${
+            on
+              ? "border-odin-accent/70 text-odin-accent"
+              : "border-hairline-strong text-foreground-mute hover:text-foreground"
+          }`}
+          style={
+            on
+              ? { boxShadow: "0 0 18px hsl(var(--accent) / 0.25) inset" }
+              : undefined
+          }
+        >
+          <Icon className="w-[18px] h-[18px]" strokeWidth={1.25} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="text-[14px] font-medium tracking-[0.02em] truncate">{name}</div>
+          <div className="mono text-[10px] uppercase tracking-[0.18em] text-foreground-mute mt-1 num">
+            {on ? (level !== undefined ? `${level}${unit ?? "%"}` : "On") : "Off"}
+          </div>
+        </div>
+      </div>
+
+      {onLevelChange && (
+        <div className="mt-5">
+          <Slider
+            value={[on ? level ?? 0 : 0]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={(v) => onLevelChange(v[0])}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const RoomDetailsTray = ({
   room,
   onClose,
@@ -283,9 +354,17 @@ const RoomDetailsTray = ({
     ? Math.round((totalBrightness / onLights.length / 255) * 100)
     : 0;
 
+  const occupied = room.occupancy?.state === "on";
+
   const toggleAll = () =>
     callService("light", anyOn ? "turn_off" : "turn_on", {
       entity_id: room.lights.map((l) => l.entity_id),
+    });
+
+  const setMasterLevel = (pct: number) =>
+    callService("light", "turn_on", {
+      entity_id: room.lights.map((l) => l.entity_id),
+      brightness_pct: pct,
     });
 
   const toggleOne = (entity_id: string, on: boolean) =>
@@ -299,213 +378,335 @@ const RoomDetailsTray = ({
 
   const mp = room.mediaPlayer;
   const mpVol = mp ? Math.round(((mp.attributes?.volume_level as number) ?? 0) * 100) : 0;
+  const mpTitle = (mp?.attributes?.media_title as string | undefined) ?? friendly(mp ?? ({} as any));
+  const mpArtist = (mp?.attributes?.media_artist as string | undefined) ?? "";
 
   return (
-    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
-      <div className="flex-1 bg-black/60" />
+    <div
+      className="fixed inset-0 z-50 flex items-stretch justify-center"
+      onClick={onClose}
+      style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(14px)" }}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[460px] bg-background border-l border-hairline-strong shadow-2xl flex flex-col"
+        className="w-full max-w-[1280px] h-full bg-background flex flex-col border-x border-hairline-strong"
       >
-        <div className="flex items-center justify-between px-6 h-16 border-b border-hairline shrink-0">
-          <div>
-            <Label>Room Controls</Label>
-            <div className="text-[16px] font-medium mt-1 tracking-[0.04em]">{room.room}</div>
+        {/* Header — generous, editorial */}
+        <div className="flex items-end justify-between px-12 pt-10 pb-8 border-b border-hairline shrink-0">
+          <div className="min-w-0">
+            <div className="mono text-[10px] uppercase tracking-[0.3em] text-foreground-mute">
+              Room Control
+            </div>
+            <h1 className="text-[44px] font-light tracking-[-0.01em] mt-3 leading-none">
+              {room.room}
+            </h1>
+            <div className="flex items-center gap-3 mt-4">
+              <StatusDot state={occupied ? "active" : "idle"} />
+              <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                {occupied ? "Occupied" : "Vacant"} · {onLights.length}/{room.lights.length} fixtures · {avgLevel}% avg
+              </span>
+            </div>
           </div>
-          <button onClick={onClose} className="w-9 h-9 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong">
+          <button
+            onClick={onClose}
+            aria-label="Close room controls"
+            className="w-11 h-11 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong hover:border-odin-accent transition-colors"
+          >
             <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
 
         <div className="flex-1 overflow-auto">
-          {/* Master controls */}
-          <div className="px-6 py-5 border-b border-hairline space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Room Master</Label>
-              <span className="mono text-[10px] text-foreground-mute num">
-                {onLights.length}/{room.lights.length} ON · {room.occupancy?.state === "on" ? "OCCUPIED" : "VACANT"}
-              </span>
-            </div>
-            <button
-              onClick={toggleAll}
-              disabled={room.lights.length === 0}
-              className={`btn-tactile w-full px-3 py-3 text-[12px] tracking-[0.14em] uppercase flex items-center justify-center gap-2 ${anyOn ? "active" : "text-foreground-dim"} disabled:opacity-40`}
-            >
-              <Power className="w-4 h-4" strokeWidth={1.5} />
-              {anyOn ? "Turn All Off" : "Turn All On"}
-            </button>
+          <div className="px-12 py-10 space-y-10">
+            {/* Master row */}
             {room.lights.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="label">Master Brightness</span>
-                  <span className="mono text-[10px] text-odin-accent num">{avgLevel}%</span>
+              <section>
+                <div className="flex items-baseline justify-between mb-5">
+                  <Label>Master</Label>
+                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                    Brightness · {avgLevel}%
+                  </span>
                 </div>
-                <Slider
-                  value={[avgLevel]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={(v) =>
-                    callService("light", "turn_on", {
-                      entity_id: room.lights.map((l) => l.entity_id),
-                      brightness_pct: v[0],
-                    })
-                  }
-                />
-              </div>
-            )}
-          </div>
-
-          {room.scenes.length > 0 && (
-            <div className="px-6 py-5 border-b border-hairline">
-              <SectionHead title="Scenes" meta={`${room.scenes.length} AVAILABLE`} />
-              <div className="grid grid-cols-2 gap-2">
-                {room.scenes.map((s) => (
+                <div
+                  className="panel p-6 flex items-center gap-6"
+                  style={{
+                    background: anyOn
+                      ? "linear-gradient(180deg, hsl(32 88% 58% / 0.06), hsl(32 88% 58% / 0.01))"
+                      : "var(--grad-panel)",
+                    boxShadow: anyOn ? "0 0 48px hsl(var(--accent) / 0.10) inset" : undefined,
+                  }}
+                >
                   <button
-                    key={s.entity}
-                    onClick={() => engageScene(s.entity)}
-                    className="px-3 py-3 text-left text-[13px] border bg-surface border-hairline hover:border-odin-accent hover:text-odin-accent transition-colors"
+                    onClick={toggleAll}
+                    className={`w-14 h-14 grid place-items-center border transition-colors shrink-0 ${
+                      anyOn
+                        ? "border-odin-accent/70 text-odin-accent"
+                        : "border-hairline-strong text-foreground-mute hover:text-foreground"
+                    }`}
+                    style={
+                      anyOn
+                        ? { boxShadow: "0 0 22px hsl(var(--accent) / 0.30) inset" }
+                        : undefined
+                    }
                   >
-                    {s.name}
+                    <Power className="w-5 h-5" strokeWidth={1.25} />
                   </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {room.lights.length > 0 && (
-            <div className="px-6 py-5 border-b border-hairline">
-              <SectionHead title="Fixtures" meta="TAP TO TOGGLE · DRAG TO DIM" />
-              <div className="space-y-4">
-                {room.lights.map((l) => {
-                  const on = isOn(l);
-                  const level = on ? Math.round((((l.attributes?.brightness as number) ?? 0) / 255) * 100) : 0;
-                  return (
-                    <div key={l.entity_id} className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => toggleOne(l.entity_id, on)}
-                          className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
-                        >
-                          <Lightbulb className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
-                        </button>
-                        <span className="text-[13px] flex-1 truncate">{friendly(l)}</span>
-                        <span className="mono text-[10px] text-foreground-mute num w-9 text-right">{level}%</span>
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[15px] font-medium tracking-[0.02em]">
+                      All {room.room} Lights
+                    </div>
+                    <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-1 num">
+                      {anyOn ? `${onLights.length} on` : "All off"}
+                    </div>
+                    <div className="mt-4">
                       <Slider
-                        value={[level]}
+                        value={[avgLevel]}
                         min={0}
                         max={100}
                         step={1}
-                        onValueChange={(v) => setLevel(l.entity_id, v[0])}
+                        onValueChange={(v) => setMasterLevel(v[0])}
                       />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                  </div>
+                </div>
+              </section>
+            )}
 
-          {(room.switches.length > 0 || room.fans.length > 0 || room.covers.length > 0) && (
-            <div className="px-6 py-5 border-b border-hairline">
-              <SectionHead
-                title="Other Devices"
-                meta={`${room.switches.length + room.fans.length + room.covers.length} ITEMS`}
-              />
-              <div className="space-y-2">
-                {room.switches.map((s) => {
-                  const on = s.state === "on";
-                  return (
-                    <div key={s.entity_id} className="flex items-center gap-3">
-                      <button
-                        onClick={() =>
-                          callService("switch", on ? "turn_off" : "turn_on", { entity_id: s.entity_id })
-                        }
-                        className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
-                      >
-                        <Power className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
-                      </button>
-                      <span className="text-[13px] flex-1 truncate">{friendly(s)}</span>
-                      <span className="mono text-[10px] text-foreground-mute uppercase">{s.state}</span>
-                    </div>
-                  );
-                })}
-                {room.fans.map((f) => {
-                  const on = f.state === "on";
-                  return (
-                    <div key={f.entity_id} className="flex items-center gap-3">
-                      <button
-                        onClick={() =>
-                          callService("fan", on ? "turn_off" : "turn_on", { entity_id: f.entity_id })
-                        }
-                        className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
-                      >
-                        <Wind className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
-                      </button>
-                      <span className="text-[13px] flex-1 truncate">{friendly(f)}</span>
-                      <span className="mono text-[10px] text-foreground-mute uppercase">{f.state}</span>
-                    </div>
-                  );
-                })}
-                {room.covers.map((c) => {
-                  const open = c.state === "open" || c.state === "opening";
-                  return (
-                    <div key={c.entity_id} className="flex items-center gap-3">
-                      <button
-                        onClick={() =>
-                          callService("cover", open ? "close_cover" : "open_cover", { entity_id: c.entity_id })
-                        }
-                        className={`btn-tactile w-9 h-7 grid place-items-center ${open ? "active" : ""}`}
-                      >
-                        <DoorClosed className={`w-3 h-3 ${open ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
-                      </button>
-                      <span className="text-[13px] flex-1 truncate">{friendly(c)}</span>
-                      <span className="mono text-[10px] text-foreground-mute uppercase">{c.state}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            {/* Scenes — refined chips */}
+            {room.scenes.length > 0 && (
+              <section>
+                <div className="flex items-baseline justify-between mb-5">
+                  <Label>Scenes</Label>
+                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                    {room.scenes.length} curated
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {room.scenes.map((s) => (
+                    <button
+                      key={s.entity}
+                      onClick={() => engageScene(s.entity)}
+                      className="group panel p-5 text-left transition-colors hover:border-odin-accent"
+                    >
+                      <div className="text-[10px] mono uppercase tracking-[0.24em] text-foreground-mute mb-3 group-hover:text-odin-accent transition-colors">
+                        Scene
+                      </div>
+                      <div className="text-[15px] font-medium tracking-[0.02em] truncate">
+                        {s.name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {mp && (
-            <div className="px-6 py-5">
-              <SectionHead title={`Audio · ${friendly(mp)}`} meta={mp.state.toUpperCase()} />
-              <div className="flex items-center gap-2 mb-3">
-                <button onClick={() => callService("media_player", "media_previous_track", { entity_id: mp.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
-                  <SkipBack className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => callService("media_player", "media_play_pause", { entity_id: mp.entity_id })}
-                  className={`w-10 h-10 grid place-items-center btn-tactile ${mp.state === "playing" ? "active" : ""}`}
-                >
-                  {mp.state === "playing"
-                    ? <Pause className="w-4 h-4" strokeWidth={1.5} />
-                    : <Play className="w-4 h-4" strokeWidth={1.5} />}
-                </button>
-                <button onClick={() => callService("media_player", "media_next_track", { entity_id: mp.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
-                  <SkipForward className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <Volume2 className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
-                <Slider
-                  value={[mpVol]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={(v) =>
-                    callService("media_player", "volume_set", {
-                      entity_id: mp.entity_id,
-                      volume_level: v[0] / 100,
-                    })
-                  }
-                  className="flex-1"
-                />
-                <span className="mono text-[10px] text-foreground-dim num w-8 text-right">{mpVol}</span>
-              </div>
-            </div>
-          )}
+            {/* Fixtures grid */}
+            {room.lights.length > 0 && (
+              <section>
+                <div className="flex items-baseline justify-between mb-5">
+                  <Label>Fixtures</Label>
+                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                    Tap icon · drag to dim
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {room.lights.map((l) => {
+                    const on = isOn(l);
+                    const level = on
+                      ? Math.round((((l.attributes?.brightness as number) ?? 0) / 255) * 100)
+                      : 0;
+                    return (
+                      <DeviceCard
+                        key={l.entity_id}
+                        icon={Lightbulb}
+                        name={friendly(l)}
+                        on={on}
+                        level={level}
+                        onToggle={() => toggleOne(l.entity_id, on)}
+                        onLevelChange={(v) => setLevel(l.entity_id, v)}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Other devices */}
+            {(room.switches.length > 0 ||
+              room.fans.length > 0 ||
+              room.covers.length > 0) && (
+              <section>
+                <div className="flex items-baseline justify-between mb-5">
+                  <Label>Other Devices</Label>
+                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                    {room.switches.length + room.fans.length + room.covers.length} items
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {room.switches.map((s) => {
+                    const on = s.state === "on";
+                    return (
+                      <DeviceCard
+                        key={s.entity_id}
+                        icon={Power}
+                        name={friendly(s)}
+                        on={on}
+                        onToggle={() =>
+                          callService("switch", on ? "turn_off" : "turn_on", {
+                            entity_id: s.entity_id,
+                          })
+                        }
+                      />
+                    );
+                  })}
+                  {room.fans.map((f) => {
+                    const on = f.state === "on";
+                    const pct = (f.attributes?.percentage as number | undefined) ?? (on ? 100 : 0);
+                    return (
+                      <DeviceCard
+                        key={f.entity_id}
+                        icon={Wind}
+                        name={friendly(f)}
+                        on={on}
+                        level={pct}
+                        onToggle={() =>
+                          callService("fan", on ? "turn_off" : "turn_on", {
+                            entity_id: f.entity_id,
+                          })
+                        }
+                        onLevelChange={(v) =>
+                          callService("fan", "set_percentage", {
+                            entity_id: f.entity_id,
+                            percentage: v,
+                          })
+                        }
+                      />
+                    );
+                  })}
+                  {room.covers.map((c) => {
+                    const open = c.state === "open" || c.state === "opening";
+                    return (
+                      <DeviceCard
+                        key={c.entity_id}
+                        icon={DoorClosed}
+                        name={friendly(c)}
+                        on={open}
+                        onToggle={() =>
+                          callService("cover", open ? "close_cover" : "open_cover", {
+                            entity_id: c.entity_id,
+                          })
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Audio — premium media card */}
+            {mp && (
+              <section>
+                <div className="flex items-baseline justify-between mb-5">
+                  <Label>Audio</Label>
+                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                    {mp.state}
+                  </span>
+                </div>
+                <div className="panel p-6 flex items-center gap-6">
+                  <div className="w-20 h-20 bg-surface-inset border border-hairline-strong shrink-0 relative overflow-hidden">
+                    {(mp.attributes?.entity_picture as string) ? (
+                      <img
+                        src={mp.attributes?.entity_picture as string}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 grid place-items-center">
+                        <Music2 className="w-7 h-7 text-foreground-mute" strokeWidth={1.25} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[15px] font-medium tracking-[0.02em] truncate">
+                      {mpTitle}
+                    </div>
+                    {mpArtist && (
+                      <div className="text-[12px] text-foreground-dim mt-0.5 truncate">
+                        {mpArtist}
+                      </div>
+                    )}
+                    <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-1 num">
+                      {friendly(mp)}
+                    </div>
+                    <div className="flex items-center gap-3 mt-4">
+                      <Volume2 className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                      <Slider
+                        value={[mpVol]}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onValueChange={(v) =>
+                          callService("media_player", "volume_set", {
+                            entity_id: mp.entity_id,
+                            volume_level: v[0] / 100,
+                          })
+                        }
+                        className="flex-1"
+                      />
+                      <span className="mono text-[10px] text-foreground-dim num w-8 text-right">
+                        {mpVol}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() =>
+                        callService("media_player", "media_previous_track", {
+                          entity_id: mp.entity_id,
+                        })
+                      }
+                      className="w-10 h-10 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong hover:border-odin-accent transition-colors"
+                    >
+                      <SkipBack className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        callService("media_player", "media_play_pause", {
+                          entity_id: mp.entity_id,
+                        })
+                      }
+                      className={`w-12 h-12 grid place-items-center border transition-colors ${
+                        mp.state === "playing"
+                          ? "border-odin-accent text-odin-accent"
+                          : "border-hairline-strong text-foreground hover:border-odin-accent"
+                      }`}
+                      style={
+                        mp.state === "playing"
+                          ? { boxShadow: "0 0 18px hsl(var(--accent) / 0.30) inset" }
+                          : undefined
+                      }
+                    >
+                      {mp.state === "playing" ? (
+                        <Pause className="w-4 h-4" strokeWidth={1.5} />
+                      ) : (
+                        <Play className="w-4 h-4" strokeWidth={1.5} />
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        callService("media_player", "media_next_track", {
+                          entity_id: mp.entity_id,
+                        })
+                      }
+                      className="w-10 h-10 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong hover:border-odin-accent transition-colors"
+                    >
+                      <SkipForward className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </div>
     </div>
