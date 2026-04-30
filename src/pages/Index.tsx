@@ -147,65 +147,95 @@ const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
   );
 };
 
-/* ——— Overview-only widgets ——— */
+/* ——— Overview-only widgets (live) ——— */
 
-const scenes = ["Welcome", "Entertain", "Dine", "Cinema", "Evening", "Goodnight", "Away"];
+import { useEntity } from "@/lib/ha-client";
+import { useDiscovery, friendly, isOn } from "@/lib/ha-discovery";
 
-type RoomProps = {
-  name: string; temp: number; occupancy: "occupied" | "vacant";
-  lights: { on: number; total: number; level: number };
-  scenes?: string[]; activeScene: string; accent?: boolean;
+type RoomLive = ReturnType<typeof useDiscovery>["rooms"][number];
+
+const RoomPanel = ({
+  room,
+  accent,
+  onOpenScenes,
+}: {
+  room: RoomLive;
+  accent?: boolean;
   onOpenScenes?: () => void;
+}) => {
+  const onLights = room.lights.filter(isOn);
+  const totalBrightness = onLights.reduce(
+    (acc, l) => acc + ((l.attributes?.brightness as number) ?? 0),
+    0,
+  );
+  const avgLevel = onLights.length
+    ? Math.round((totalBrightness / onLights.length / 255) * 100)
+    : 0;
+  const occupied = room.occupancy?.state === "on";
+  const playing = room.mediaPlayer?.state === "playing";
+
+  return (
+    <button onClick={onOpenScenes} className="text-left w-full group" disabled={!room.scenes.length}>
+      <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors group-hover:border-hairline-strong`}>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[15px] font-medium tracking-[0.04em] truncate">{room.room}</h3>
+              <StatusDot state={occupied ? "active" : "idle"} />
+            </div>
+            <div className="label mt-1.5">
+              {occupied ? "Occupied" : "Vacant"} · {onLights.length}/{room.lights.length} fixtures
+              {playing ? " · Audio active" : ""}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="mono text-[20px] num leading-none">{room.scenes.length}</div>
+            <div className="label mt-1.5">Scenes</div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <Label>{room.scenes.length ? "Scenes" : "Status"}</Label>
+            <div className="text-[15px] font-medium mt-1.5 tracking-[0.02em]">
+              {room.scenes.length ? `${room.scenes.length} available` : onLights.length ? "Lights on" : "Idle"}
+            </div>
+          </div>
+          {room.scenes.length > 0 && (
+            <div className="flex items-center gap-1.5 text-foreground-mute group-hover:text-odin-accent transition-colors">
+              <span className="mono text-[10px] uppercase tracking-[0.14em]">Adjust</span>
+              <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </div>
+          )}
+        </div>
+
+        <div className="h-1 bg-surface-inset relative overflow-hidden">
+          <div className="h-full" style={{
+            width: `${avgLevel}%`,
+            background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+            boxShadow: avgLevel > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
+          }} />
+        </div>
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="label">Lighting</span>
+          <span className="mono text-[10px] text-foreground-dim num">{avgLevel}%</span>
+        </div>
+      </div>
+    </button>
+  );
 };
 
-const RoomPanel = ({ name, temp, occupancy, lights, activeScene, accent, onOpenScenes }: RoomProps) => (
-  <button onClick={onOpenScenes} className="text-left w-full group">
-    <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors group-hover:border-hairline-strong`}>
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-[15px] font-medium tracking-[0.04em]">{name}</h3>
-            <StatusDot state={occupancy === "occupied" ? "active" : "idle"} />
-          </div>
-          <div className="label mt-1.5">{occupancy === "occupied" ? "Occupied" : "Vacant"} · {lights.on}/{lights.total} fixtures</div>
-        </div>
-        <div className="text-right">
-          <div className="mono text-[20px] num leading-none">{temp}°</div>
-          <div className="label mt-1.5">Ambient</div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <Label>Scene</Label>
-          <div className="text-[15px] font-medium mt-1.5 tracking-[0.02em]">{activeScene}</div>
-        </div>
-        <div className="flex items-center gap-1.5 text-foreground-mute group-hover:text-odin-accent transition-colors">
-          <span className="mono text-[10px] uppercase tracking-[0.14em]">Adjust</span>
-          <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
-        </div>
-      </div>
-
-      <div className="h-1 bg-surface-inset relative overflow-hidden">
-        <div className="h-full" style={{
-          width: `${lights.level}%`,
-          background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-          boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
-        }} />
-      </div>
-      <div className="flex items-center justify-between mt-1.5">
-        <span className="label">Lighting</span>
-        <span className="mono text-[10px] text-foreground-dim num">{lights.level}%</span>
-      </div>
-    </div>
-  </button>
-);
-
-type SceneTarget = { room: string; options: string[]; active: string };
+type SceneTarget = { room: string; options: { name: string; entity: string }[] };
 
 const SceneTray = ({
-  target, onClose, onChoose,
-}: { target: SceneTarget | null; onClose: () => void; onChoose: (room: string, scene: string) => void }) => {
+  target,
+  onClose,
+  onChoose,
+}: {
+  target: SceneTarget | null;
+  onClose: () => void;
+  onChoose: (entity: string) => void;
+}) => {
   if (!target) return null;
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
@@ -224,29 +254,21 @@ const SceneTray = ({
           </button>
         </div>
         <div className="p-6 space-y-2 flex-1 overflow-auto">
-          {target.options.map((s) => {
-            const active = target.active === s;
-            return (
-              <button
-                key={s}
-                onClick={() => { onChoose(target.room, s); onClose(); }}
-                className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors border ${
-                  active
-                    ? "bg-surface-raised border-odin-accent/60 text-foreground"
-                    : "bg-surface border-hairline hover:border-hairline-strong text-foreground-dim"
-                }`}
-                style={active ? { boxShadow: "0 0 24px hsl(var(--accent) / 0.12)" } : undefined}
-              >
-                <span className="text-[15px] tracking-[0.02em]">{s}</span>
-                {active ? <span className="dot text-odin-accent" /> : <span className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">Engage</span>}
-              </button>
-            );
-          })}
-        </div>
-        <div className="px-6 py-4 border-t border-hairline">
-          <div className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">
-            Tap any scene to engage · changes apply instantly
-          </div>
+          {target.options.map((s) => (
+            <button
+              key={s.entity}
+              onClick={() => { onChoose(s.entity); onClose(); }}
+              className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors border bg-surface border-hairline hover:border-hairline-strong text-foreground-dim"
+            >
+              <span className="text-[15px] tracking-[0.02em]">{s.name}</span>
+              <span className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">Engage</span>
+            </button>
+          ))}
+          {target.options.length === 0 && (
+            <div className="text-[12px] text-foreground-mute text-center py-6">
+              No scenes for this room.
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -254,43 +276,65 @@ const SceneTray = ({
 };
 
 const NowPlaying = () => {
-  const [playing, setPlaying] = useState(true);
-  const vol = 38;
+  const { mediaPlayers } = useDiscovery();
+  const { callService } = useHa();
+  const playing = mediaPlayers.find((m) => m.state === "playing") ?? mediaPlayers[0];
+  if (!playing) {
+    return (
+      <Panel>
+        <Label>Now Playing</Label>
+        <div className="text-[12px] text-foreground-mute mt-2">No media players</div>
+      </Panel>
+    );
+  }
+  const a = playing.attributes ?? {};
+  const vol = Math.round(((a.volume_level as number) ?? 0) * 100);
+  const isPlaying = playing.state === "playing";
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
-        <Label>Now Playing · Sonos</Label>
-        <span className="mono text-[10px] text-odin-accent">ARC ULTRA + ERA 100 ×2</span>
+        <Label>Now Playing · {friendly(playing)}</Label>
+        <span className="mono text-[10px] text-odin-accent uppercase">{playing.state}</span>
       </div>
       <div className="flex items-center gap-4 mb-5">
         <div className="w-16 h-16 bg-surface-inset border border-hairline-strong shrink-0 relative overflow-hidden">
-          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(28 60% 35%), hsl(220 30% 12%))" }} />
+          {a.entity_picture ? (
+            <img src={a.entity_picture as string} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, hsl(28 60% 35%), hsl(220 30% 12%))" }} />
+          )}
           <div className="absolute inset-0 scanline" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-medium truncate">Spiegel im Spiegel</div>
-          <div className="text-[12px] text-foreground-dim truncate">Arvo Pärt · Alina</div>
-          <div className="mono text-[10px] text-foreground-mute mt-1.5 num">02:14 / 09:33</div>
+          <div className="text-[14px] font-medium truncate">{(a.media_title as string) ?? "—"}</div>
+          <div className="text-[12px] text-foreground-dim truncate">{(a.media_artist as string) ?? ""}</div>
         </div>
-      </div>
-      <div className="h-px bg-surface-inset mb-1">
-        <div className="h-px bg-odin-accent" style={{ width: "24%", boxShadow: "0 0 8px hsl(var(--accent))" }} />
       </div>
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-1">
-          <button className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
+          <button onClick={() => callService("media_player", "media_previous_track", { entity_id: playing.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
             <SkipBack className="w-4 h-4" strokeWidth={1.5} />
           </button>
-          <button onClick={() => setPlaying(!playing)} className="w-10 h-10 grid place-items-center btn-tactile active">
-            {playing ? <Pause className="w-4 h-4" strokeWidth={1.5} /> : <Play className="w-4 h-4" strokeWidth={1.5} />}
+          <button onClick={() => callService("media_player", "media_play_pause", { entity_id: playing.entity_id })} className={`w-10 h-10 grid place-items-center btn-tactile ${isPlaying ? "active" : ""}`}>
+            {isPlaying ? <Pause className="w-4 h-4" strokeWidth={1.5} /> : <Play className="w-4 h-4" strokeWidth={1.5} />}
           </button>
-          <button className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
+          <button onClick={() => callService("media_player", "media_next_track", { entity_id: playing.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
             <SkipForward className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
         <div className="flex items-center gap-2 flex-1 ml-6">
           <Volume2 className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
-          <div className="flex-1 h-px bg-surface-inset relative">
+          <div
+            className="flex-1 h-px bg-surface-inset relative cursor-pointer"
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              const pct = Math.round(((e.clientX - r.left) / r.width) * 100);
+              callService("media_player", "volume_set", {
+                entity_id: playing.entity_id,
+                volume_level: Math.max(0, Math.min(100, pct)) / 100,
+              });
+            }}
+          >
             <div className="h-px bg-foreground-dim" style={{ width: `${vol}%` }} />
           </div>
           <span className="mono text-[10px] text-foreground-dim num w-6 text-right">{vol}</span>
@@ -300,92 +344,131 @@ const NowPlaying = () => {
   );
 };
 
-const Climate = () => (
-  <Panel>
-    <div className="flex items-center justify-between mb-5">
-      <Label>Climate · Resideo T10 Plus</Label>
-      <div className="flex items-center gap-2">
-        <Snowflake className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
-        <span className="mono text-[10px] text-foreground-dim">COOLING</span>
+const Climate = () => {
+  const { climateZones } = useDiscovery();
+  if (climateZones.length === 0) return null;
+  const primary = climateZones[0];
+  const a = primary.state.attributes ?? {};
+  const setpoint = (a.temperature as number) ?? 0;
+  const current = (a.current_temperature as number) ?? 0;
+  const humidity = (a.current_humidity as number) ?? 0;
+  return (
+    <Panel>
+      <div className="flex items-center justify-between mb-5">
+        <Label>Climate · {primary.name}</Label>
+        <div className="flex items-center gap-2">
+          <Snowflake className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
+          <span className="mono text-[10px] text-foreground-dim uppercase">{primary.state.state}</span>
+        </div>
       </div>
-    </div>
-    <div className="flex items-end gap-6 mb-6">
-      <div>
-        <div className="mono text-[44px] font-light leading-none num">71<span className="text-[20px] text-foreground-dim">°</span></div>
-        <Label className="mt-2 block">Setpoint</Label>
-      </div>
-      <div className="pb-1">
-        <div className="mono text-[16px] num text-foreground-dim">72°</div>
-        <Label className="mt-1 block">Current</Label>
-      </div>
-      <div className="ml-auto pb-1 text-right">
-        <div className="mono text-[16px] num text-foreground-dim">42<span className="text-foreground-mute">%</span></div>
-        <Label className="mt-1 block">Humidity</Label>
-      </div>
-    </div>
-    <div className="space-y-2.5">
-      {[{ z: "Main Level", v: 71 }, { z: "Upper Level", v: 70 }, { z: "Primary Suite", v: 69 }].map(z => (
-        <div key={z.z} className="flex items-center gap-3">
-          <span className="text-[11px] text-foreground-dim w-28">{z.z}</span>
-          <div className="flex-1 h-px bg-surface-inset relative">
-            <div className="h-px bg-foreground-dim/60" style={{ width: `${(z.v - 60) * 5}%` }} />
+      <div className="flex items-end gap-6 mb-6">
+        <div>
+          <div className="mono text-[44px] font-light leading-none num">
+            {setpoint}<span className="text-[20px] text-foreground-dim">°</span>
           </div>
-          <span className="mono text-[11px] num w-10 text-right">{z.v}°</span>
+          <Label className="mt-2 block">Setpoint</Label>
         </div>
-      ))}
-    </div>
-  </Panel>
-);
-
-const sensors = [
-  { name: "Front Door", state: "Closed", icon: DoorClosed, status: "ok" as const },
-  { name: "Garage Pedestrian", state: "Closed", icon: DoorClosed, status: "ok" as const },
-  { name: "Patio Slider", state: "Closed", icon: DoorClosed, status: "ok" as const },
-  { name: "Foyer Motion", state: "Clear", icon: Activity, status: "idle" as const },
-  { name: "Hallway Motion", state: "Active", icon: Activity, status: "active" as const },
-  { name: "Mudroom Motion", state: "Clear", icon: Activity, status: "idle" as const },
-];
-
-const Security = () => (
-  <Panel>
-    <div className="flex items-center justify-between mb-4">
-      <Label>Perimeter · Aqara</Label>
-      <div className="flex items-center gap-2">
-        <Lock className="w-3 h-3 text-odin-ok" strokeWidth={1.5} />
-        <span className="mono text-[10px] text-odin-ok">ARMED · STAY</span>
+        <div className="pb-1">
+          <div className="mono text-[16px] num text-foreground-dim">{current}°</div>
+          <Label className="mt-1 block">Current</Label>
+        </div>
+        <div className="ml-auto pb-1 text-right">
+          <div className="mono text-[16px] num text-foreground-dim">
+            {humidity}<span className="text-foreground-mute">%</span>
+          </div>
+          <Label className="mt-1 block">Humidity</Label>
+        </div>
       </div>
-    </div>
-    <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
-      {sensors.map((s) => (
-        <div key={s.name} className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60">
-          <s.icon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
-          <span className="text-[12px] flex-1">{s.name}</span>
-          <StatusDot state={s.status} />
-          <span className="mono text-[10px] text-foreground-dim w-12 text-right">{s.state.toUpperCase()}</span>
-        </div>
-      ))}
-    </div>
-  </Panel>
-);
+      <div className="space-y-2.5">
+        {climateZones.slice(0, 4).map((z) => {
+          const v = (z.state.attributes?.current_temperature as number) ?? 0;
+          return (
+            <div key={z.state.entity_id} className="flex items-center gap-3">
+              <span className="text-[11px] text-foreground-dim w-28 truncate">{z.name}</span>
+              <div className="flex-1 h-px bg-surface-inset relative">
+                <div className="h-px bg-foreground-dim/60" style={{ width: `${Math.min(100, Math.max(0, (v - 60) * 5))}%` }} />
+              </div>
+              <span className="mono text-[11px] num w-10 text-right">{v}°</span>
+            </div>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+};
 
-const garageHistory = [
-  { t: "18:42", dir: "in" as const, label: "Closed · Vehicle parked" },
-  { t: "18:38", dir: "in" as const, label: "Opened · Vehicle arrived" },
-  { t: "08:14", dir: "out" as const, label: "Closed · Departure" },
-  { t: "08:12", dir: "out" as const, label: "Opened · Departure" },
-  { t: "Yesterday 19:50", dir: "in" as const, label: "Closed · Vehicle parked" },
-];
+const Security = () => {
+  const { alarm, doorSensors, motionSensors } = useDiscovery();
+  const armState = alarm?.state ?? "unknown";
+  const armed = armState.startsWith("armed");
+  const all = [...doorSensors, ...motionSensors].slice(0, 6);
+  return (
+    <Panel>
+      <div className="flex items-center justify-between mb-4">
+        <Label>Perimeter</Label>
+        <div className="flex items-center gap-2">
+          <Lock className={`w-3 h-3 ${armed ? "text-odin-ok" : "text-foreground-dim"}`} strokeWidth={1.5} />
+          <span className={`mono text-[10px] uppercase ${armed ? "text-odin-ok" : "text-foreground-dim"}`}>
+            {armState.replace(/_/g, " ")}
+          </span>
+        </div>
+      </div>
+      {all.length === 0 ? (
+        <div className="text-[12px] text-foreground-mute py-2">No sensors discovered</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
+          {all.map((s) => {
+            const open = s.state === "on";
+            const isMotion =
+              s.attributes?.device_class === "motion" || s.attributes?.device_class === "occupancy";
+            const Icon = isMotion ? Activity : DoorClosed;
+            return (
+              <div key={s.entity_id} className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60">
+                <Icon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
+                <span className="text-[12px] flex-1 truncate">{friendly(s)}</span>
+                <StatusDot state={open ? (isMotion ? "active" : "alert") : "ok"} />
+                <span className="mono text-[10px] text-foreground-dim w-14 text-right">
+                  {isMotion ? (open ? "ACTIVE" : "CLEAR") : open ? "OPEN" : "CLOSED"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Panel>
+  );
+};
 
 const Garage = () => {
-  const [open, setOpen] = useState(false);
+  const { garageCover } = useDiscovery();
+  const { callService } = useHa();
+  if (!garageCover) {
+    return (
+      <Panel>
+        <Label>Garage</Label>
+        <div className="text-[12px] text-foreground-mute mt-2">No garage cover discovered</div>
+      </Panel>
+    );
+  }
+  const open = garageCover.state === "open" || garageCover.state === "opening";
+  const moving = garageCover.state === "opening" || garageCover.state === "closing";
+  const last = garageCover.last_changed
+    ? new Date(garageCover.last_changed).toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, month: "short", day: "numeric" })
+    : "—";
+
+  const toggle = () =>
+    callService("cover", open ? "close_cover" : "open_cover", {
+      entity_id: garageCover.entity_id,
+    });
+
   return (
     <Panel padding="p-0">
       <div className="flex items-center justify-between p-4 pb-3">
-        <Label>Garage · LiftMaster / ratgdo32</Label>
+        <Label>Garage · {friendly(garageCover)}</Label>
         <div className="flex items-center gap-2">
           <StatusDot state={open ? "active" : "idle"} />
-          <span className={`mono text-[10px] ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
-            {open ? "OPEN" : "SECURED"}
+          <span className={`mono text-[10px] uppercase ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
+            {garageCover.state}
           </span>
         </div>
       </div>
@@ -396,97 +479,117 @@ const Garage = () => {
           {open && <div className="absolute inset-0 border border-odin-accent/60" style={{ boxShadow: "0 0 14px hsl(var(--accent) / 0.3) inset" }} />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[14px] font-medium">Bay 01 — {open ? "Open" : "Closed"}</div>
-          <div className="mono text-[10px] text-foreground-mute mt-0.5">
-            Vehicle present · Tesla Model S · 87% charged
-          </div>
+          <div className="text-[14px] font-medium capitalize">{garageCover.state}</div>
+          <div className="mono text-[10px] text-foreground-mute mt-0.5">Last change · {last}</div>
         </div>
-        <TactileButton active={open} onClick={() => setOpen(!open)} className="!px-5 !py-3">
-          {open ? "Close" : "Open"}
+        <TactileButton active={open} onClick={toggle} className="!px-5 !py-3">
+          {moving ? "…" : open ? "Close" : "Open"}
         </TactileButton>
-      </div>
-
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <Label>Presence · Last 24h</Label>
-          <span className="mono text-[10px] text-foreground-mute">5 EVENTS</span>
-        </div>
-        <ul className="space-y-1">
-          {garageHistory.map((h, i) => (
-            <li key={i} className="flex items-center gap-3 py-1.5 border-b border-hairline/60 last:border-b-0">
-              <div className={`w-5 h-5 grid place-items-center ${h.dir === "in" ? "text-odin-accent" : "text-foreground-mute"}`}>
-                {h.dir === "in"
-                  ? <ArrowDownToLine className="w-3 h-3" strokeWidth={1.5} />
-                  : <ArrowUpFromLine className="w-3 h-3" strokeWidth={1.5} />}
-              </div>
-              <span className="mono text-[10px] text-foreground-mute num w-32">{h.t}</span>
-              <span className="text-[12px] text-foreground-dim flex-1 truncate">{h.label}</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </Panel>
   );
 };
 
-const Doorbell = () => (
-  <Panel padding="p-0" className="overflow-hidden">
-    <div className="flex items-center justify-between p-4 pb-3">
-      <Label>Front Entry · Nest Doorbell</Label>
-      <div className="flex items-center gap-2">
-        <span className="dot text-odin-alert" />
-        <span className="mono text-[10px] text-odin-alert">LIVE</span>
-      </div>
-    </div>
-    <div className="relative aspect-[16/10] bg-surface-inset border-t border-hairline">
-      <img src={doorbellFeed} alt="Front entry doorbell live feed" className="w-full h-full object-cover opacity-90" />
-      <div className="absolute inset-0 scanline pointer-events-none" />
-      <div className="absolute top-3 left-3 mono text-[10px] text-white/80 num bg-black/40 px-1.5 py-0.5">
-        CAM·01 · 2160p · {new Date().toLocaleTimeString("en-US", { hour12: false })}
-      </div>
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-        <span className="mono text-[10px] text-white/70 uppercase tracking-[0.16em]">No motion · 04:12 ago</span>
-        <div className="flex gap-1.5">
-          <TactileButton className="!px-2.5 !py-1 !text-[10px]">Talk</TactileButton>
-          <TactileButton className="!px-2.5 !py-1 !text-[10px]">Unlock</TactileButton>
+const Doorbell = () => {
+  const { doorbell } = useDiscovery();
+  const { cameraSnapshot } = useHa();
+  const [src, setSrc] = useState<string | null>(null);
+  const [updated, setUpdated] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!doorbell) return;
+    let cancelled = false;
+    const tick = async () => {
+      const url = await cameraSnapshot(doorbell.entity_id);
+      if (!cancelled && url) {
+        setSrc(url);
+        setUpdated(new Date());
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [doorbell?.entity_id, cameraSnapshot]);
+
+  if (!doorbell) {
+    return (
+      <Panel>
+        <Label>Front Entry</Label>
+        <div className="text-[12px] text-foreground-mute mt-2">No doorbell camera discovered</div>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel padding="p-0" className="overflow-hidden">
+      <div className="flex items-center justify-between p-4 pb-3">
+        <Label>{friendly(doorbell)}</Label>
+        <div className="flex items-center gap-2">
+          <span className="dot text-odin-alert" />
+          <span className="mono text-[10px] text-odin-alert">LIVE</span>
         </div>
       </div>
-    </div>
-  </Panel>
-);
+      <div className="relative aspect-[16/10] bg-surface-inset border-t border-hairline">
+        {src ? (
+          <>
+            <img src={src} alt="" className="w-full h-full object-cover opacity-90" />
+            <div className="absolute inset-0 scanline pointer-events-none" />
+            <div className="absolute top-3 left-3 mono text-[10px] text-white/80 num bg-black/40 px-1.5 py-0.5">
+              SNAPSHOT · {updated?.toLocaleTimeString("en-US", { hour12: false }) ?? "—"}
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 grid place-items-center">
+            <Video className="w-8 h-8 text-foreground-mute animate-pulse" strokeWidth={1} />
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+};
 
-const AirPurifier = () => (
-  <Panel>
-    <div className="flex items-center justify-between mb-4">
-      <Label>Air · Primary Suite</Label>
-      <div className="flex items-center gap-2">
-        <Wind className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
-        <span className="mono text-[10px] text-foreground-dim">AUTO</span>
+const AirPurifier = () => {
+  const { airPurifier } = useDiscovery();
+  const { callService } = useHa();
+  if (!airPurifier) {
+    return (
+      <Panel>
+        <Label>Air</Label>
+        <div className="text-[12px] text-foreground-mute mt-2">No air purifier discovered</div>
+      </Panel>
+    );
+  }
+  const a = airPurifier.attributes ?? {};
+  const modes: string[] = (a.preset_modes as string[]) ?? ["sleep", "auto", "boost"];
+  const current = (a.preset_mode as string) ?? airPurifier.state;
+  return (
+    <Panel>
+      <div className="flex items-center justify-between mb-4">
+        <Label>Air · {friendly(airPurifier)}</Label>
+        <div className="flex items-center gap-2">
+          <Wind className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
+          <span className="mono text-[10px] text-foreground-dim uppercase">{current}</span>
+        </div>
       </div>
-    </div>
-    <div className="flex items-end justify-between mb-4">
-      <div>
-        <div className="mono text-[28px] font-light leading-none num">12<span className="text-[14px] text-foreground-dim ml-1">PM2.5</span></div>
-        <Label className="mt-2 block">Excellent</Label>
+      <div className="flex gap-1.5">
+        {modes.slice(0, 4).map((m) => (
+          <TactileButton
+            key={m}
+            active={current === m}
+            onClick={() => callService("fan", "set_preset_mode", { entity_id: airPurifier.entity_id, preset_mode: m })}
+            className="!flex-1 !py-2 capitalize"
+          >
+            {m}
+          </TactileButton>
+        ))}
       </div>
-      <div className="text-right">
-        <div className="mono text-[14px] text-foreground-dim num">36<span className="text-foreground-mute">%</span></div>
-        <Label className="mt-1 block">Filter</Label>
-      </div>
-    </div>
-    <div className="flex gap-1.5">
-      {["Sleep", "Auto", "Boost"].map((m, i) => (
-        <TactileButton key={m} active={i === 1} className="!flex-1 !py-2">{m}</TactileButton>
-      ))}
-    </div>
-  </Panel>
-);
+    </Panel>
+  );
+};
 
 const Voice = () => {
-  const sats = [
-    { name: "Odin Voice — Living Room", status: "active" as const, state: "Listening" },
-    { name: "Odin Voice — Office", status: "idle" as const, state: "Standby" },
-  ];
+  const { voiceSatellites } = useDiscovery();
+  if (voiceSatellites.length === 0) return null;
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
@@ -494,76 +597,116 @@ const Voice = () => {
         <Mic className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
       </div>
       <div className="space-y-3">
-        {sats.map((s) => (
-          <div key={s.name} className="flex items-center gap-3">
-            <div className="w-9 h-9 border border-hairline-strong grid place-items-center relative">
-              <Mic className="w-3.5 h-3.5 text-foreground-dim" strokeWidth={1.5} />
-              {s.status === "active" && (
-                <div className="absolute inset-0 border border-odin-accent" style={{ boxShadow: "0 0 12px hsl(var(--accent) / 0.4) inset" }} />
-              )}
+        {voiceSatellites.slice(0, 4).map((s) => {
+          const active = s.state.state === "listening" || s.state.state === "responding";
+          return (
+            <div key={s.state.entity_id} className="flex items-center gap-3">
+              <div className="w-9 h-9 border border-hairline-strong grid place-items-center relative">
+                <Mic className={`w-3.5 h-3.5 ${active ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.5} />
+                {active && <div className="absolute inset-0 border border-odin-accent" style={{ boxShadow: "0 0 12px hsl(var(--accent) / 0.4) inset" }} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] truncate">{s.name}</div>
+                <div className="mono text-[10px] text-foreground-mute mt-0.5 uppercase">{s.state.state}</div>
+              </div>
+              <StatusDot state={active ? "active" : "idle"} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[12px] truncate">{s.name}</div>
-              <div className="mono text-[10px] text-foreground-mute mt-0.5">{s.state.toUpperCase()}</div>
-            </div>
-            <StatusDot state={s.status} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Panel>
   );
 };
 
 const GlobalScenes = () => {
-  const [active, setActive] = useState("Evening");
+  const { scenes: allScenes } = useDiscovery();
+  const { callService } = useHa();
+  const top = allScenes.slice(0, 7);
   return (
     <Panel accent>
       <div className="flex items-start justify-between mb-5">
         <div>
           <Label>Residence Scenes</Label>
-          <div className="text-[16px] font-medium mt-2 tracking-[0.04em]">Currently — {active}</div>
-          <div className="text-[12px] text-foreground-dim mt-1">Soft warm lighting · Climate 71° · Audio low · Perimeter armed</div>
+          <div className="text-[16px] font-medium mt-2 tracking-[0.04em]">{top.length} available</div>
+          <div className="text-[12px] text-foreground-dim mt-1">Tap to engage · live via Home Assistant</div>
         </div>
         <Power className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {scenes.map(s => (
-          <TactileButton key={s} active={active === s} onClick={() => setActive(s)} className="!px-4 !py-2">{s}</TactileButton>
-        ))}
-      </div>
+      {top.length === 0 ? (
+        <div className="text-[12px] text-foreground-mute">No global scenes found</div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {top.map((s) => (
+            <TactileButton
+              key={s.entity_id}
+              onClick={() => callService("scene", "turn_on", { entity_id: s.entity_id })}
+              className="!px-4 !py-2"
+            >
+              {friendly(s)}
+            </TactileButton>
+          ))}
+        </div>
+      )}
     </Panel>
   );
 };
 
-const roomDefs = [
-  { name: "Living Room", temp: 71, occupancy: "occupied" as const, lights: { on: 6, total: 8, level: 42 }, scenes: scenes, accent: true },
-  { name: "Kitchen", temp: 72, occupancy: "vacant" as const, lights: { on: 2, total: 6, level: 18 }, scenes: ["Bright", "Cook", "Dine", "Clean", "Off"] },
-  { name: "Primary Bedroom", temp: 69, occupancy: "vacant" as const, lights: { on: 0, total: 5, level: 0 }, scenes: ["Wake", "Read", "Relax", "Goodnight", "Off"] },
-];
+const ActivityLog = () => {
+  const { states } = useHa();
+  const recent = Object.values(states)
+    .filter((s) => s.last_changed)
+    .sort((a, b) => new Date(b.last_changed!).getTime() - new Date(a.last_changed!).getTime())
+    .slice(0, 8);
+  return (
+    <Panel>
+      <div className="flex items-center justify-between mb-3">
+        <Label>Activity</Label>
+        <Bell className="w-3 h-3 text-foreground-mute" strokeWidth={1.5} />
+      </div>
+      <ul className="space-y-2.5">
+        {recent.map((s) => (
+          <li key={s.entity_id} className="flex gap-3 text-[12px]">
+            <span className="mono text-foreground-mute num shrink-0">
+              {new Date(s.last_changed!).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })}
+            </span>
+            <span className="text-foreground-dim truncate">
+              {friendly(s)} → <span className="mono">{s.state}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+};
 
 const OverviewView = () => {
-  const [activeScenes, setActiveScenes] = useState<Record<string, string>>({
-    "Living Room": "Evening", "Kitchen": "Dine", "Primary Bedroom": "Off",
-  });
+  const { rooms } = useDiscovery();
+  const { callService } = useHa();
   const [tray, setTray] = useState<SceneTarget | null>(null);
 
   return (
     <div className="flex-1 flex min-h-0">
       <section className="flex-1 p-8 space-y-6 overflow-auto">
         <GlobalScenes />
-        <div>
-          <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR · TAP TO ADJUST" />
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {roomDefs.map(r => (
-              <RoomPanel
-                key={r.name}
-                {...r}
-                activeScene={activeScenes[r.name]}
-                onOpenScenes={() => setTray({ room: r.name, options: r.scenes, active: activeScenes[r.name] })}
-              />
-            ))}
+        {rooms.length > 0 && (
+          <div>
+            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP TO ADJUST`} />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {rooms.map((r, i) => (
+                <RoomPanel
+                  key={r.room}
+                  room={r}
+                  accent={i === 0}
+                  onOpenScenes={
+                    r.scenes.length
+                      ? () => setTray({ room: r.room, options: r.scenes.map((s) => ({ name: s.name, entity: s.entity })) })
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Doorbell /><Garage />
         </div>
@@ -576,33 +719,14 @@ const OverviewView = () => {
       <SceneTray
         target={tray}
         onClose={() => setTray(null)}
-        onChoose={(room, scene) => setActiveScenes(p => ({ ...p, [room]: scene }))}
+        onChoose={(entity) => callService("scene", "turn_on", { entity_id: entity })}
       />
 
-    <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
-      <Climate /><NowPlaying /><Voice />
-      <Panel>
-        <div className="flex items-center justify-between mb-3">
-          <Label>Activity</Label>
-          <Bell className="w-3 h-3 text-foreground-mute" strokeWidth={1.5} />
-        </div>
-        <ul className="space-y-2.5">
-          {[
-            { t: "18:42", e: "Garage Bay 01 closed" },
-            { t: "18:38", e: "Vehicle arrived · Driveway" },
-            { t: "18:21", e: "Scene: Evening engaged" },
-            { t: "17:55", e: "Climate setpoint → 71°" },
-            { t: "16:10", e: "Filter @ 36% — service in 21d" },
-          ].map((i, idx) => (
-            <li key={idx} className="flex gap-3 text-[12px]">
-              <span className="mono text-foreground-mute num">{i.t}</span>
-              <span className="text-foreground-dim">{i.e}</span>
-            </li>
-          ))}
-        </ul>
-      </Panel>
-    </aside>
-  </div>
+      <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
+        <Climate /><NowPlaying /><Voice />
+        <ActivityLog />
+      </aside>
+    </div>
   );
 };
 
