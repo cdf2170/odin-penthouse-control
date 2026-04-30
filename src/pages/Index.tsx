@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
+  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fan, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, Wind, Car, X, Pencil, EyeOff, Eye, Check
