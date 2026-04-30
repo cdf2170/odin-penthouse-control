@@ -104,15 +104,10 @@ export const HaProvider = ({ children }: { children: ReactNode }) => {
           const m: StateMap = {};
           for (const s of msg.result as HaState[]) m[s.entity_id] = s;
           setStates(m);
-          if (typeof window !== "undefined") (window as any).__haStates = m;
         } else if (msg.type === "event" && msg.event?.event_type === "state_changed") {
           const ns = msg.event.data?.new_state as HaState | null;
           if (ns) {
-            setStates((prev) => {
-              const next = { ...prev, [ns.entity_id]: ns };
-              if (typeof window !== "undefined") (window as any).__haStates = next;
-              return next;
-            });
+            setStates((prev) => ({ ...prev, [ns.entity_id]: ns }));
           }
         }
       };
