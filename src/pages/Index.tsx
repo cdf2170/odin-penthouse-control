@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-  Activity, Bell, ChevronRight, DoorClosed, Fingerprint,
+  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
-  Video, Volume2, Wind, Car
+  Video, Volume2, Wind, Car, X
 } from "lucide-react";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
@@ -133,59 +133,107 @@ const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
 
 const scenes = ["Welcome", "Entertain", "Dine", "Cinema", "Evening", "Goodnight", "Away"];
 
-const RoomScenes = ({ active, options = scenes }: { active: string; options?: string[] }) => {
-  const [a, setA] = useState(active);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((s) => (
-        <TactileButton key={s} active={a === s} onClick={() => setA(s)}>{s}</TactileButton>
-      ))}
-    </div>
-  );
-};
-
 type RoomProps = {
   name: string; temp: number; occupancy: "occupied" | "vacant";
   lights: { on: number; total: number; level: number };
   scenes?: string[]; activeScene: string; accent?: boolean;
+  onOpenScenes?: () => void;
 };
 
-const RoomPanel = ({ name, temp, occupancy, lights, scenes: rs, activeScene, accent }: RoomProps) => (
-  <Panel accent={accent}>
-    <div className="flex items-start justify-between mb-5">
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-medium tracking-[0.04em]">{name}</h3>
-          <StatusDot state={occupancy === "occupied" ? "active" : "idle"} />
+const RoomPanel = ({ name, temp, occupancy, lights, activeScene, accent, onOpenScenes }: RoomProps) => (
+  <button onClick={onOpenScenes} className="text-left w-full group">
+    <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors group-hover:border-hairline-strong`}>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-[15px] font-medium tracking-[0.04em]">{name}</h3>
+            <StatusDot state={occupancy === "occupied" ? "active" : "idle"} />
+          </div>
+          <div className="label mt-1.5">{occupancy === "occupied" ? "Occupied" : "Vacant"} · {lights.on}/{lights.total} fixtures</div>
         </div>
-        <div className="label mt-1.5">{occupancy === "occupied" ? "Occupied" : "Vacant"} · {lights.on}/{lights.total} fixtures</div>
+        <div className="text-right">
+          <div className="mono text-[20px] num leading-none">{temp}°</div>
+          <div className="label mt-1.5">Ambient</div>
+        </div>
       </div>
-      <div className="text-right">
-        <div className="mono text-[20px] num leading-none">{temp}°</div>
-        <div className="label mt-1.5">Ambient</div>
+
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <Label>Scene</Label>
+          <div className="text-[15px] font-medium mt-1.5 tracking-[0.02em]">{activeScene}</div>
+        </div>
+        <div className="flex items-center gap-1.5 text-foreground-mute group-hover:text-odin-accent transition-colors">
+          <span className="mono text-[10px] uppercase tracking-[0.14em]">Adjust</span>
+          <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+        </div>
+      </div>
+
+      <div className="h-1 bg-surface-inset relative overflow-hidden">
+        <div className="h-full" style={{
+          width: `${lights.level}%`,
+          background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+          boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
+        }} />
+      </div>
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="label">Lighting</span>
+        <span className="mono text-[10px] text-foreground-dim num">{lights.level}%</span>
       </div>
     </div>
-    <div className="space-y-4">
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Lighting</Label>
-          <span className="mono text-[11px] text-foreground-dim num">{lights.level}%</span>
-        </div>
-        <div className="h-1 bg-surface-inset relative overflow-hidden">
-          <div className="h-full" style={{
-            width: `${lights.level}%`,
-            background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-            boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
-          }} />
-        </div>
-      </div>
-      <div>
-        <Label className="mb-2 block">Scene</Label>
-        <RoomScenes active={activeScene} options={rs} />
-      </div>
-    </div>
-  </Panel>
+  </button>
 );
+
+type SceneTarget = { room: string; options: string[]; active: string };
+
+const SceneTray = ({
+  target, onClose, onChoose,
+}: { target: SceneTarget | null; onClose: () => void; onChoose: (room: string, scene: string) => void }) => {
+  if (!target) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/60" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[420px] bg-background border-l border-hairline-strong shadow-2xl flex flex-col"
+      >
+        <div className="flex items-center justify-between px-6 h-16 border-b border-hairline">
+          <div>
+            <Label>Scenes</Label>
+            <div className="text-[16px] font-medium mt-1 tracking-[0.04em]">{target.room}</div>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong">
+            <X className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        </div>
+        <div className="p-6 space-y-2 flex-1 overflow-auto">
+          {target.options.map((s) => {
+            const active = target.active === s;
+            return (
+              <button
+                key={s}
+                onClick={() => { onChoose(target.room, s); onClose(); }}
+                className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors border ${
+                  active
+                    ? "bg-surface-raised border-odin-accent/60 text-foreground"
+                    : "bg-surface border-hairline hover:border-hairline-strong text-foreground-dim"
+                }`}
+                style={active ? { boxShadow: "0 0 24px hsl(var(--accent) / 0.12)" } : undefined}
+              >
+                <span className="text-[15px] tracking-[0.02em]">{s}</span>
+                {active ? <span className="dot text-odin-accent" /> : <span className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">Engage</span>}
+              </button>
+            );
+          })}
+        </div>
+        <div className="px-6 py-4 border-t border-hairline">
+          <div className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">
+            Tap any scene to engage · changes apply instantly
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const NowPlaying = () => {
   const [playing, setPlaying] = useState(true);
@@ -302,23 +350,62 @@ const Security = () => (
   </Panel>
 );
 
+const garageHistory = [
+  { t: "18:42", dir: "in" as const, label: "Closed · Vehicle parked" },
+  { t: "18:38", dir: "in" as const, label: "Opened · Vehicle arrived" },
+  { t: "08:14", dir: "out" as const, label: "Closed · Departure" },
+  { t: "08:12", dir: "out" as const, label: "Opened · Departure" },
+  { t: "Yesterday 19:50", dir: "in" as const, label: "Closed · Vehicle parked" },
+];
+
 const Garage = () => {
   const [open, setOpen] = useState(false);
   return (
-    <Panel>
-      <div className="flex items-center justify-between mb-4">
+    <Panel padding="p-0">
+      <div className="flex items-center justify-between p-4 pb-3">
         <Label>Garage · LiftMaster / ratgdo32</Label>
-        <StatusDot state={open ? "active" : "idle"} />
-      </div>
-      <div className="flex items-center gap-4">
-        <Car className="w-8 h-8 text-foreground-dim" strokeWidth={1.25} />
-        <div className="flex-1">
-          <div className="text-[14px] font-medium">Bay 01 — {open ? "Open" : "Closed"}</div>
-          <div className="mono text-[10px] text-foreground-mute mt-0.5">Last: 18:42 · Vehicle present</div>
+        <div className="flex items-center gap-2">
+          <StatusDot state={open ? "active" : "idle"} />
+          <span className={`mono text-[10px] ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
+            {open ? "OPEN" : "SECURED"}
+          </span>
         </div>
-        <TactileButton active={open} onClick={() => setOpen(!open)} className="!px-4 !py-2">
+      </div>
+
+      <div className="px-4 pb-4 flex items-center gap-4 border-b border-hairline">
+        <div className="w-14 h-14 border border-hairline-strong grid place-items-center bg-surface-inset relative">
+          <Car className={`w-6 h-6 ${open ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.25} />
+          {open && <div className="absolute inset-0 border border-odin-accent/60" style={{ boxShadow: "0 0 14px hsl(var(--accent) / 0.3) inset" }} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[14px] font-medium">Bay 01 — {open ? "Open" : "Closed"}</div>
+          <div className="mono text-[10px] text-foreground-mute mt-0.5">
+            Vehicle present · Tesla Model S · 87% charged
+          </div>
+        </div>
+        <TactileButton active={open} onClick={() => setOpen(!open)} className="!px-5 !py-3">
           {open ? "Close" : "Open"}
         </TactileButton>
+      </div>
+
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Label>Presence · Last 24h</Label>
+          <span className="mono text-[10px] text-foreground-mute">5 EVENTS</span>
+        </div>
+        <ul className="space-y-1">
+          {garageHistory.map((h, i) => (
+            <li key={i} className="flex items-center gap-3 py-1.5 border-b border-hairline/60 last:border-b-0">
+              <div className={`w-5 h-5 grid place-items-center ${h.dir === "in" ? "text-odin-accent" : "text-foreground-mute"}`}>
+                {h.dir === "in"
+                  ? <ArrowDownToLine className="w-3 h-3" strokeWidth={1.5} />
+                  : <ArrowUpFromLine className="w-3 h-3" strokeWidth={1.5} />}
+              </div>
+              <span className="mono text-[10px] text-foreground-mute num w-32">{h.t}</span>
+              <span className="text-[12px] text-foreground-dim flex-1 truncate">{h.label}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </Panel>
   );
@@ -430,25 +517,48 @@ const GlobalScenes = () => {
   );
 };
 
-const OverviewView = () => (
-  <div className="flex-1 flex min-h-0">
-    <section className="flex-1 p-8 space-y-6 overflow-auto">
-      <GlobalScenes />
-      <div>
-        <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <RoomPanel name="Living Room" temp={71} occupancy="occupied" lights={{ on: 6, total: 8, level: 42 }} activeScene="Evening" accent />
-          <RoomPanel name="Kitchen" temp={72} occupancy="vacant" lights={{ on: 2, total: 6, level: 18 }} activeScene="Dine" scenes={["Bright", "Cook", "Dine", "Clean", "Off"]} />
-          <RoomPanel name="Primary Bedroom" temp={69} occupancy="vacant" lights={{ on: 0, total: 5, level: 0 }} activeScene="Off" scenes={["Wake", "Read", "Relax", "Goodnight", "Off"]} />
+const roomDefs = [
+  { name: "Living Room", temp: 71, occupancy: "occupied" as const, lights: { on: 6, total: 8, level: 42 }, scenes: scenes, accent: true },
+  { name: "Kitchen", temp: 72, occupancy: "vacant" as const, lights: { on: 2, total: 6, level: 18 }, scenes: ["Bright", "Cook", "Dine", "Clean", "Off"] },
+  { name: "Primary Bedroom", temp: 69, occupancy: "vacant" as const, lights: { on: 0, total: 5, level: 0 }, scenes: ["Wake", "Read", "Relax", "Goodnight", "Off"] },
+];
+
+const OverviewView = () => {
+  const [activeScenes, setActiveScenes] = useState<Record<string, string>>({
+    "Living Room": "Evening", "Kitchen": "Dine", "Primary Bedroom": "Off",
+  });
+  const [tray, setTray] = useState<SceneTarget | null>(null);
+
+  return (
+    <div className="flex-1 flex min-h-0">
+      <section className="flex-1 p-8 space-y-6 overflow-auto">
+        <GlobalScenes />
+        <div>
+          <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR · TAP TO ADJUST" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {roomDefs.map(r => (
+              <RoomPanel
+                key={r.name}
+                {...r}
+                activeScene={activeScenes[r.name]}
+                onOpenScenes={() => setTray({ room: r.name, options: r.scenes, active: activeScenes[r.name] })}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Doorbell /><Garage />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Security /><AirPurifier />
-      </div>
-    </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Doorbell /><Garage />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Security /><AirPurifier />
+        </div>
+      </section>
+
+      <SceneTray
+        target={tray}
+        onClose={() => setTray(null)}
+        onChoose={(room, scene) => setActiveScenes(p => ({ ...p, [room]: scene }))}
+      />
 
     <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
       <Climate /><NowPlaying /><Voice />
@@ -474,7 +584,8 @@ const OverviewView = () => (
       </Panel>
     </aside>
   </div>
-);
+  );
+};
 
 const Index = () => {
   const [now, setNow] = useState(new Date());
