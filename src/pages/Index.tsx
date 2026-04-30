@@ -517,25 +517,48 @@ const GlobalScenes = () => {
   );
 };
 
-const OverviewView = () => (
-  <div className="flex-1 flex min-h-0">
-    <section className="flex-1 p-8 space-y-6 overflow-auto">
-      <GlobalScenes />
-      <div>
-        <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <RoomPanel name="Living Room" temp={71} occupancy="occupied" lights={{ on: 6, total: 8, level: 42 }} activeScene="Evening" accent />
-          <RoomPanel name="Kitchen" temp={72} occupancy="vacant" lights={{ on: 2, total: 6, level: 18 }} activeScene="Dine" scenes={["Bright", "Cook", "Dine", "Clean", "Off"]} />
-          <RoomPanel name="Primary Bedroom" temp={69} occupancy="vacant" lights={{ on: 0, total: 5, level: 0 }} activeScene="Off" scenes={["Wake", "Read", "Relax", "Goodnight", "Off"]} />
+const roomDefs = [
+  { name: "Living Room", temp: 71, occupancy: "occupied" as const, lights: { on: 6, total: 8, level: 42 }, scenes: scenes, accent: true },
+  { name: "Kitchen", temp: 72, occupancy: "vacant" as const, lights: { on: 2, total: 6, level: 18 }, scenes: ["Bright", "Cook", "Dine", "Clean", "Off"] },
+  { name: "Primary Bedroom", temp: 69, occupancy: "vacant" as const, lights: { on: 0, total: 5, level: 0 }, scenes: ["Wake", "Read", "Relax", "Goodnight", "Off"] },
+];
+
+const OverviewView = () => {
+  const [activeScenes, setActiveScenes] = useState<Record<string, string>>({
+    "Living Room": "Evening", "Kitchen": "Dine", "Primary Bedroom": "Off",
+  });
+  const [tray, setTray] = useState<SceneTarget | null>(null);
+
+  return (
+    <div className="flex-1 flex min-h-0">
+      <section className="flex-1 p-8 space-y-6 overflow-auto">
+        <GlobalScenes />
+        <div>
+          <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR · TAP TO ADJUST" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {roomDefs.map(r => (
+              <RoomPanel
+                key={r.name}
+                {...r}
+                activeScene={activeScenes[r.name]}
+                onOpenScenes={() => setTray({ room: r.name, options: r.scenes, active: activeScenes[r.name] })}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Doorbell /><Garage />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Security /><AirPurifier />
-      </div>
-    </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Doorbell /><Garage />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Security /><AirPurifier />
+        </div>
+      </section>
+
+      <SceneTray
+        target={tray}
+        onClose={() => setTray(null)}
+        onChoose={(room, scene) => setActiveScenes(p => ({ ...p, [room]: scene }))}
+      />
 
     <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
       <Climate /><NowPlaying /><Voice />
