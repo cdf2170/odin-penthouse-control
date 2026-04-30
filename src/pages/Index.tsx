@@ -533,13 +533,11 @@ const RoomDetailsTray = ({
             {/* Other devices */}
             {(() => {
               const isBedroom = room.room === "Bedroom";
-              const fans = isBedroom
-                ? []
-                : room.fans;
-              const switches = isBedroom
-                ? []
-                : room.switches;
-              const covers = isBedroom ? [] : room.covers;
+              const isLivingRoom = room.room === "Living Room";
+              const hideAuto = isBedroom || isLivingRoom;
+              const fans = hideAuto ? [] : room.fans;
+              const switches = hideAuto ? [] : room.switches;
+              const covers = hideAuto ? [] : room.covers;
 
               // Bedroom: only show Bedroom Fan (switch) + Bedroom Speaker (media_player w/ volume)
               const bedroomFanSwitch = isBedroom
