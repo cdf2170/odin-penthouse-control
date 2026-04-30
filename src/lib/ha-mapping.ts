@@ -26,7 +26,7 @@ export const haMap = {
       media_player: "media_player.sonos_kitchen",
     },
     Bedroom: {
-      lights: ["light.bedroom_main", "light.bedroom_bedside"],
+      lights: ["light.bedroom_lamps"],
       scenes: {
         Wind_Down: "scene.bedroom_wind_down",
         Sleep: "scene.bedroom_sleep",
