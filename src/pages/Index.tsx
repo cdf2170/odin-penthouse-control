@@ -454,7 +454,7 @@ const RoomDetailsTray = ({
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-medium tracking-[0.02em]">
-                      All {room.room} Lights
+                      {room.room} Lights
                     </div>
                     <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-1 num">
                       {anyOn ? `${onLights.length} on` : "All off"}
@@ -506,16 +506,21 @@ const RoomDetailsTray = ({
               const individualLights = room.lights.filter((l) => {
                 const id = l.entity_id.toLowerCase();
                 const fname = (l.attributes?.friendly_name ?? "").toLowerCase();
+                const roomWords = room.room.toLowerCase().split(/\s+/);
                 const roomSlug = room.room.toLowerCase().replace(/\s+/g, "_");
                 const roomCompact = room.room.toLowerCase().replace(/\s+/g, "");
                 const isAllSuffix = /(_all|_lights|_group)$/.test(id);
                 const isRoomGroup =
                   id === `light.${roomSlug}` || id === `light.${roomCompact}`;
+                // Also catch group entities matching any word in a multi-word room name
+                // (e.g. "light.bathroom" inside "Upstairs Bathroom")
+                const isWordGroup = roomWords.some((w) => id === `light.${w}`);
                 const isFriendlyAll =
                   fname === `${room.room.toLowerCase()} lights` ||
                   fname === `${room.room.toLowerCase()} all` ||
-                  fname.endsWith(" all");
-                return !(isAllSuffix || isRoomGroup || isFriendlyAll);
+                  fname.endsWith(" all") ||
+                  roomWords.some((w) => fname === `${w} lights`);
+                return !(isAllSuffix || isRoomGroup || isWordGroup || isFriendlyAll);
               });
               if (individualLights.length <= 1) return null;
               return (
