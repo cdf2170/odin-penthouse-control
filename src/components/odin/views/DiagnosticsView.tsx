@@ -5,6 +5,7 @@ import { Panel, Label, StatusDot, SectionHead } from "@/components/odin/primitiv
 import { useHa } from "@/lib/ha-client";
 import { useAuth } from "@/lib/auth";
 import { friendly } from "@/lib/ha-discovery";
+import LiveInspector from "@/components/odin/LiveInspector";
 
 const DiagnosticsView = () => {
   const { states, connected, error } = useHa();
@@ -142,6 +143,8 @@ const DiagnosticsView = () => {
           </div>
         </Panel>
       )}
+
+      <LiveInspector />
     </div>
   );
 };
