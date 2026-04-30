@@ -78,16 +78,27 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
       <Label className="px-3 mt-8 mb-3 block">System</Label>
       <ul className="space-y-px">
         {[
-          { icon: Activity, label: "Diagnostics" },
-          { icon: Settings, label: "Configuration" },
-        ].map((it) => (
-          <li key={it.label}>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] text-foreground-dim hover:text-foreground hover:bg-surface-raised/40 transition-colors">
-              <it.icon className="w-4 h-4" strokeWidth={1.5} />
-              <span className="tracking-wide">{it.label}</span>
-            </button>
-          </li>
-        ))}
+          { icon: Activity, label: "Diagnostics" as ViewKey },
+          { icon: Settings, label: "Configuration" as ViewKey },
+        ].map((it) => {
+          const active = view === it.label;
+          return (
+            <li key={it.label}>
+              <button
+                onClick={() => setView(it.label)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
+                  active
+                    ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
+                    : "text-foreground-dim hover:text-foreground hover:bg-surface-raised/40"
+                }`}
+              >
+                <it.icon className="w-4 h-4" strokeWidth={1.5} />
+                <span className="tracking-wide">{it.label}</span>
+                {active && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-60" />}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </nav>
 
