@@ -493,52 +493,86 @@ const NowPlaying = () => {
 
 const Climate = () => {
   const { climateZones } = useDiscovery();
+  const { callService } = useHa();
+  const [zoneIdx, setZoneIdx] = useState(0);
   if (climateZones.length === 0) return null;
-  const primary = climateZones[0];
-  const a = primary.state.attributes ?? {};
+  const idx = Math.min(zoneIdx, climateZones.length - 1);
+  const zone = climateZones[idx];
+  const a = zone.state.attributes ?? {};
   const setpoint = (a.temperature as number) ?? 0;
   const current = (a.current_temperature as number) ?? 0;
-  const humidity = (a.current_humidity as number) ?? 0;
+  const minT = (a.min_temp as number) ?? 50;
+  const maxT = (a.max_temp as number) ?? 90;
+  const step = (a.target_temp_step as number) ?? 1;
+  const mode = zone.state.state;
+  const modes: string[] = (a.hvac_modes as string[]) ?? ["off", "heat", "cool", "auto"];
+
+  const setTemp = (next: number) => {
+    const clamped = Math.max(minT, Math.min(maxT, next));
+    callService("climate", "set_temperature", {
+      entity_id: zone.state.entity_id,
+      temperature: clamped,
+    });
+  };
+
+  const cycleMode = () => {
+    const i = modes.indexOf(mode);
+    const next = modes[(i + 1) % modes.length] ?? modes[0];
+    callService("climate", "set_hvac_mode", {
+      entity_id: zone.state.entity_id,
+      hvac_mode: next,
+    });
+  };
+
   return (
     <Panel>
-      <div className="flex items-center justify-between mb-5">
-        <Label>Climate · {primary.name}</Label>
-        <div className="flex items-center gap-2">
-          <Snowflake className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
-          <span className="mono text-[10px] text-foreground-dim uppercase">{primary.state.state}</span>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <Label>Climate</Label>
+        <button
+          onClick={cycleMode}
+          className="flex items-center gap-2 btn-tactile px-2.5 py-1 text-[10px] tracking-[0.14em] uppercase text-foreground-dim"
+          title="Cycle HVAC mode"
+        >
+          <Snowflake className="w-3 h-3" strokeWidth={1.5} />
+          {mode}
+        </button>
       </div>
-      <div className="flex items-end gap-6 mb-6">
-        <div>
-          <div className="mono text-[44px] font-light leading-none num">
-            {setpoint}<span className="text-[20px] text-foreground-dim">°</span>
+
+      {climateZones.length > 1 && (
+        <div className="flex flex-wrap gap-1 mb-4">
+          {climateZones.map((z, i) => (
+            <button
+              key={z.state.entity_id}
+              onClick={() => setZoneIdx(i)}
+              className={`px-2.5 py-1 text-[10px] tracking-[0.1em] uppercase border transition-colors ${i === idx ? "border-odin-accent text-foreground" : "border-hairline text-foreground-dim hover:border-hairline-strong"}`}
+            >
+              {z.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setTemp(setpoint - step)}
+          className="btn-tactile w-9 h-9 grid place-items-center text-foreground-dim text-[18px] leading-none"
+          aria-label="Lower setpoint"
+        >
+          −
+        </button>
+        <div className="flex-1 text-center">
+          <div className="mono text-[36px] font-light leading-none num">
+            {setpoint}<span className="text-[18px] text-foreground-dim">°</span>
           </div>
-          <Label className="mt-2 block">Setpoint</Label>
+          <div className="label mt-1.5">{zone.name} · now {current}°</div>
         </div>
-        <div className="pb-1">
-          <div className="mono text-[16px] num text-foreground-dim">{current}°</div>
-          <Label className="mt-1 block">Current</Label>
-        </div>
-        <div className="ml-auto pb-1 text-right">
-          <div className="mono text-[16px] num text-foreground-dim">
-            {humidity}<span className="text-foreground-mute">%</span>
-          </div>
-          <Label className="mt-1 block">Humidity</Label>
-        </div>
-      </div>
-      <div className="space-y-2.5">
-        {climateZones.slice(0, 4).map((z) => {
-          const v = (z.state.attributes?.current_temperature as number) ?? 0;
-          return (
-            <div key={z.state.entity_id} className="flex items-center gap-3">
-              <span className="text-[11px] text-foreground-dim w-28 truncate">{z.name}</span>
-              <div className="flex-1 h-px bg-surface-inset relative">
-                <div className="h-px bg-foreground-dim/60" style={{ width: `${Math.min(100, Math.max(0, (v - 60) * 5))}%` }} />
-              </div>
-              <span className="mono text-[11px] num w-10 text-right">{v}°</span>
-            </div>
-          );
-        })}
+        <button
+          onClick={() => setTemp(setpoint + step)}
+          className="btn-tactile w-9 h-9 grid place-items-center text-foreground-dim text-[18px] leading-none"
+          aria-label="Raise setpoint"
+        >
+          +
+        </button>
       </div>
     </Panel>
   );
