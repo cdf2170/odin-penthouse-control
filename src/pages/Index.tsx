@@ -1299,7 +1299,6 @@ const OverviewView = () => {
     <div className="flex-1 flex min-h-0">
       <section className="flex-1 p-8 space-y-6 overflow-auto">
         <QuickControls />
-        <GlobalScenes />
         {rooms.length > 0 && (
           <div>
             <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP DETAILS FOR FULL CONTROL`} />
@@ -1316,12 +1315,9 @@ const OverviewView = () => {
           </div>
         )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Doorbell /><Garage />
+          <Doorbell />
+          <Security />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Security /><AirPurifier />
-        </div>
-        
       </section>
 
       <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
