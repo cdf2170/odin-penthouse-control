@@ -1013,7 +1013,7 @@ const OverviewView = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Security /><AirPurifier />
         </div>
-        <LiveInspector />
+        
       </section>
 
       <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
