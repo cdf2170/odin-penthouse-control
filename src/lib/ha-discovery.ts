@@ -167,9 +167,8 @@ export function useDiscovery() {
       return { room, lights: rLights, scenes: rScenes, occupancy, mediaPlayer, switches: rSwitches, fans: rFans, covers: rCovers };
     };
 
-    const rooms = ALLOWED_ROOMS.map(roomBundle).filter(
-      (r) => r.lights.length > 0 || r.scenes.length > 0 || (r as any).switches.length > 0,
-    );
+    // Always show every canonical room — even empty ones so the user can confirm the slot exists
+    const rooms = ALLOWED_ROOMS.map(roomBundle);
 
     // Climate zones: use override zones if any are present in states; else discover all climate.*
     const zonesFromMap = haMap.climate.zones
