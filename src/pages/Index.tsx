@@ -1203,9 +1203,9 @@ const QuickControls = () => {
   };
 
   const lightsTile = (room: string, label: string, icon: any) => {
-    const r = rooms.find((x) => x.room === room);
-    if (!r || r.lights.length === 0) return null;
-    const onLights = r.lights.filter(isOn);
+    const roomLights = findRoomLights(room);
+    if (roomLights.length === 0) return null;
+    const onLights = roomLights.filter(isOn);
     const active = onLights.length > 0;
     const totalBrightness = onLights.reduce(
       (acc, l) => acc + ((l.attributes?.brightness as number) ?? 0),
@@ -1224,7 +1224,7 @@ const QuickControls = () => {
         tone="amber"
         onClick={() =>
           callService("light", active ? "turn_off" : "turn_on", {
-            entity_id: r.lights.map((l) => l.entity_id),
+            entity_id: roomLights.map((l) => l.entity_id),
           })
         }
       />
