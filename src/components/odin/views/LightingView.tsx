@@ -162,7 +162,7 @@ export default function LightingView() {
               meta={`${room.lights.filter(isOn).length} ENGAGED`}
             />
             <div>
-              {room.lights.map((f) => (
+              {[...room.lights].reverse().map((f) => (
                 <FixtureRow
                   key={f.entity_id}
                   f={f}
