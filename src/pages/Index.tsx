@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
-  Video, Volume2, Wind, Car, X
+  Video, Volume2, Wind, Car, X, Pencil, EyeOff, Eye, Check
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
 import LiveInspector from "@/components/odin/LiveInspector";
