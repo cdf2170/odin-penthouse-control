@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Pause, Play, SkipBack, SkipForward, Volume2, Speaker, Radio } from "lucide-react";
-import { Panel, Label, SectionHead, TactileButton, StatusDot } from "../primitives";
+import { Pause, Play, SkipBack, SkipForward, Volume2, Speaker as SpeakerIcon } from "lucide-react";
+import { Panel, Label, SectionHead, StatusDot } from "../primitives";
 
-type Speaker = { name: string; model: string; group: string; vol: number; playing: boolean };
+type SpeakerZone = { name: string; model: string; group: string; vol: number; playing: boolean };
 
-const initial: Speaker[] = [
+const initial: SpeakerZone[] = [
   { name: "Living Room", model: "Sonos Arc Ultra", group: "Main", vol: 38, playing: true },
   { name: "Living Surrounds", model: "Era 100 ×2", group: "Main", vol: 28, playing: true },
   { name: "Kitchen", model: "Era 300", group: "Main", vol: 32, playing: true },
