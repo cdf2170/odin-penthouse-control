@@ -85,6 +85,13 @@ export function useDiscovery() {
       /(purifier|air)/.test(norm(f.attributes?.friendly_name ?? f.entity_id)),
     );
 
+    // Bedroom fan (fan in the bedroom, excluding the air purifier)
+    const bedroomFan = fans.find(
+      (f) =>
+        f.entity_id !== airPurifier?.entity_id &&
+        /bedroom/.test(norm(f.attributes?.friendly_name ?? f.entity_id)),
+    );
+
     // Fixed canonical room list — no auto-discovery to avoid duplicates like "Kitchen" vs "Kitchen All"
     const ALLOWED_ROOMS = [
       "Living Room",
@@ -165,6 +172,7 @@ export function useDiscovery() {
       doorbell,
       otherCameras,
       airPurifier,
+      bedroomFan,
       rooms,
       climateZones,
       voiceSatellites,
