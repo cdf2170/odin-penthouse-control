@@ -1191,12 +1191,6 @@ const Calendar = () => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    import("@/integrations/supabase/client").then(({ supabase }) => {
-      supabase.functions
-        .invoke("google-calendar-events", { method: "GET" as any, body: undefined as any })
-        // functions.invoke doesn't pass query params reliably; use direct fetch instead
-        .catch(() => null);
-    });
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-events?range=${range}`;
     fetch(url, {
       headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
