@@ -1259,6 +1259,68 @@ const QuickControls = () => {
     );
   };
 
+          {(room.switches.length > 0 || room.fans.length > 0 || room.covers.length > 0) && (
+            <div className="px-6 py-5 border-b border-hairline">
+              <SectionHead
+                title="Other Devices"
+                meta={`${room.switches.length + room.fans.length + room.covers.length} ITEMS`}
+              />
+              <div className="space-y-2">
+                {room.switches.map((s) => {
+                  const on = s.state === "on";
+                  return (
+                    <div key={s.entity_id} className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          callService("switch", on ? "turn_off" : "turn_on", { entity_id: s.entity_id })
+                        }
+                        className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
+                      >
+                        <Power className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                      </button>
+                      <span className="text-[13px] flex-1 truncate">{friendly(s)}</span>
+                      <span className="mono text-[10px] text-foreground-mute uppercase">{s.state}</span>
+                    </div>
+                  );
+                })}
+                {room.fans.map((f) => {
+                  const on = f.state === "on";
+                  return (
+                    <div key={f.entity_id} className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          callService("fan", on ? "turn_off" : "turn_on", { entity_id: f.entity_id })
+                        }
+                        className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
+                      >
+                        <Wind className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                      </button>
+                      <span className="text-[13px] flex-1 truncate">{friendly(f)}</span>
+                      <span className="mono text-[10px] text-foreground-mute uppercase">{f.state}</span>
+                    </div>
+                  );
+                })}
+                {room.covers.map((c) => {
+                  const open = c.state === "open" || c.state === "opening";
+                  return (
+                    <div key={c.entity_id} className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          callService("cover", open ? "close_cover" : "open_cover", { entity_id: c.entity_id })
+                        }
+                        className={`btn-tactile w-9 h-7 grid place-items-center ${open ? "active" : ""}`}
+                      >
+                        <DoorClosed className={`w-3 h-3 ${open ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                      </button>
+                      <span className="text-[13px] flex-1 truncate">{friendly(c)}</span>
+                      <span className="mono text-[10px] text-foreground-mute uppercase">{c.state}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
 
 
   const garageTile = garageCover
