@@ -1270,16 +1270,10 @@ const QuickControls = () => {
   if (tiles.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-          {tiles}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <GarageQuickCard />
-        <AirPurifierQuickCard />
+    <div>
+      <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+        {tiles}
       </div>
     </div>
   );
