@@ -133,59 +133,107 @@ const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
 
 const scenes = ["Welcome", "Entertain", "Dine", "Cinema", "Evening", "Goodnight", "Away"];
 
-const RoomScenes = ({ active, options = scenes }: { active: string; options?: string[] }) => {
-  const [a, setA] = useState(active);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((s) => (
-        <TactileButton key={s} active={a === s} onClick={() => setA(s)}>{s}</TactileButton>
-      ))}
-    </div>
-  );
-};
-
 type RoomProps = {
   name: string; temp: number; occupancy: "occupied" | "vacant";
   lights: { on: number; total: number; level: number };
   scenes?: string[]; activeScene: string; accent?: boolean;
+  onOpenScenes?: () => void;
 };
 
-const RoomPanel = ({ name, temp, occupancy, lights, scenes: rs, activeScene, accent }: RoomProps) => (
-  <Panel accent={accent}>
-    <div className="flex items-start justify-between mb-5">
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-medium tracking-[0.04em]">{name}</h3>
-          <StatusDot state={occupancy === "occupied" ? "active" : "idle"} />
+const RoomPanel = ({ name, temp, occupancy, lights, activeScene, accent, onOpenScenes }: RoomProps) => (
+  <button onClick={onOpenScenes} className="text-left w-full group">
+    <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors group-hover:border-hairline-strong`}>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-[15px] font-medium tracking-[0.04em]">{name}</h3>
+            <StatusDot state={occupancy === "occupied" ? "active" : "idle"} />
+          </div>
+          <div className="label mt-1.5">{occupancy === "occupied" ? "Occupied" : "Vacant"} · {lights.on}/{lights.total} fixtures</div>
         </div>
-        <div className="label mt-1.5">{occupancy === "occupied" ? "Occupied" : "Vacant"} · {lights.on}/{lights.total} fixtures</div>
+        <div className="text-right">
+          <div className="mono text-[20px] num leading-none">{temp}°</div>
+          <div className="label mt-1.5">Ambient</div>
+        </div>
       </div>
-      <div className="text-right">
-        <div className="mono text-[20px] num leading-none">{temp}°</div>
-        <div className="label mt-1.5">Ambient</div>
+
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <Label>Scene</Label>
+          <div className="text-[15px] font-medium mt-1.5 tracking-[0.02em]">{activeScene}</div>
+        </div>
+        <div className="flex items-center gap-1.5 text-foreground-mute group-hover:text-odin-accent transition-colors">
+          <span className="mono text-[10px] uppercase tracking-[0.14em]">Adjust</span>
+          <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+        </div>
+      </div>
+
+      <div className="h-1 bg-surface-inset relative overflow-hidden">
+        <div className="h-full" style={{
+          width: `${lights.level}%`,
+          background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+          boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
+        }} />
+      </div>
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="label">Lighting</span>
+        <span className="mono text-[10px] text-foreground-dim num">{lights.level}%</span>
       </div>
     </div>
-    <div className="space-y-4">
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Lighting</Label>
-          <span className="mono text-[11px] text-foreground-dim num">{lights.level}%</span>
-        </div>
-        <div className="h-1 bg-surface-inset relative overflow-hidden">
-          <div className="h-full" style={{
-            width: `${lights.level}%`,
-            background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-            boxShadow: lights.level > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
-          }} />
-        </div>
-      </div>
-      <div>
-        <Label className="mb-2 block">Scene</Label>
-        <RoomScenes active={activeScene} options={rs} />
-      </div>
-    </div>
-  </Panel>
+  </button>
 );
+
+type SceneTarget = { room: string; options: string[]; active: string };
+
+const SceneTray = ({
+  target, onClose, onChoose,
+}: { target: SceneTarget | null; onClose: () => void; onChoose: (room: string, scene: string) => void }) => {
+  if (!target) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/60" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[420px] bg-background border-l border-hairline-strong shadow-2xl flex flex-col"
+      >
+        <div className="flex items-center justify-between px-6 h-16 border-b border-hairline">
+          <div>
+            <Label>Scenes</Label>
+            <div className="text-[16px] font-medium mt-1 tracking-[0.04em]">{target.room}</div>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong">
+            <X className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        </div>
+        <div className="p-6 space-y-2 flex-1 overflow-auto">
+          {target.options.map((s) => {
+            const active = target.active === s;
+            return (
+              <button
+                key={s}
+                onClick={() => { onChoose(target.room, s); onClose(); }}
+                className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors border ${
+                  active
+                    ? "bg-surface-raised border-odin-accent/60 text-foreground"
+                    : "bg-surface border-hairline hover:border-hairline-strong text-foreground-dim"
+                }`}
+                style={active ? { boxShadow: "0 0 24px hsl(var(--accent) / 0.12)" } : undefined}
+              >
+                <span className="text-[15px] tracking-[0.02em]">{s}</span>
+                {active ? <span className="dot text-odin-accent" /> : <span className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">Engage</span>}
+              </button>
+            );
+          })}
+        </div>
+        <div className="px-6 py-4 border-t border-hairline">
+          <div className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">
+            Tap any scene to engage · changes apply instantly
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const NowPlaying = () => {
   const [playing, setPlaying] = useState(true);
