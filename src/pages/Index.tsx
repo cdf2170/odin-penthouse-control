@@ -7,6 +7,9 @@ import {
 } from "lucide-react";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
+import LiveInspector from "@/components/odin/LiveInspector";
+import { useHa } from "@/lib/ha-client";
+import { useAuth } from "@/lib/auth";
 import LightingView from "@/components/odin/views/LightingView";
 import ClimateView from "@/components/odin/views/ClimateView";
 import SecurityView from "@/components/odin/views/SecurityView";
@@ -26,7 +29,11 @@ const navItems: { icon: any; label: ViewKey }[] = [
   { icon: Mic, label: "Voice" },
 ];
 
-const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => (
+const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => {
+  const { connected, error, states } = useHa();
+  const { user, signOut } = useAuth();
+  const entityCount = Object.keys(states).length;
+  return (
   <aside className="w-[232px] shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
     <div className="px-6 pt-7 pb-8">
       <div className="flex items-center gap-2.5">
@@ -85,23 +92,34 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
     <Hairline />
     <div className="px-6 py-5 space-y-3">
       <div className="flex items-center justify-between">
-        <Label>Network</Label>
+        <Label>HA Link</Label>
         <div className="flex items-center gap-2">
-          <StatusDot state="ok" />
-          <span className="mono text-[11px] text-foreground-dim">ONLINE</span>
+          <StatusDot state={connected ? "active" : error ? "alert" : "idle"} />
+          <span className="mono text-[11px] text-foreground-dim">
+            {connected ? "LIVE" : error ? "OFFLINE" : "…"}
+          </span>
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <Label>Devices</Label>
-        <span className="mono text-[11px] text-foreground-dim num">187 / 187</span>
+        <Label>Entities</Label>
+        <span className="mono text-[11px] text-foreground-dim num">{entityCount}</span>
       </div>
       <div className="flex items-center justify-between">
-        <Label>Latency</Label>
-        <span className="mono text-[11px] text-foreground-dim num">12 ms</span>
+        <Label>Operator</Label>
+        <span className="mono text-[11px] text-foreground-dim truncate max-w-[120px]">
+          {user?.email ?? "—"}
+        </span>
       </div>
+      <button
+        onClick={signOut}
+        className="w-full text-left label hover:text-odin-accent transition-colors pt-1"
+      >
+        Sign out →
+      </button>
     </div>
   </aside>
-);
+  );
+};
 
 const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
   const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -552,6 +570,7 @@ const OverviewView = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Security /><AirPurifier />
         </div>
+        <LiveInspector />
       </section>
 
       <SceneTray
