@@ -1191,9 +1191,10 @@ const Calendar = () => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-events?range=${range}`;
     fetch(url, {
-      headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      headers: { Authorization: `Bearer ${key}`, apikey: key },
     })
       .then((r) => r.json())
       .then((d) => {
