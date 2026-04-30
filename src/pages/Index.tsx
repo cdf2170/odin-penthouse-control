@@ -783,6 +783,8 @@ const Index = () => {
             {view === "Audio" && <AudioView />}
             {view === "Cameras" && <CamerasView />}
             {view === "Voice" && <VoiceView />}
+            {view === "Diagnostics" && <DiagnosticsView />}
+            {view === "Configuration" && <ConfigurationView />}
           </div>
         )}
       </main>
