@@ -501,33 +501,33 @@ const RoomDetailsTray = ({
               </section>
             )}
 
-            {/* Fixtures grid */}
-            {room.lights.length > 0 && (
-              <section>
-                <div className="flex items-baseline justify-between mb-5">
-                  <Label>Fixtures</Label>
-                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
-                    Tap icon · drag to dim
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {room.lights
-                    .filter((l) => {
-                      // Hide HA group/"all" helpers — Master row above already controls these
-                      const id = l.entity_id.toLowerCase();
-                      const fname = (l.attributes?.friendly_name ?? "").toLowerCase();
-                      const roomSlug = room.room.toLowerCase().replace(/\s+/g, "_");
-                      const roomCompact = room.room.toLowerCase().replace(/\s+/g, "");
-                      const isAllSuffix = /(_all|_lights|_group)$/.test(id);
-                      const isRoomGroup =
-                        id === `light.${roomSlug}` || id === `light.${roomCompact}`;
-                      const isFriendlyAll =
-                        fname === `${room.room.toLowerCase()} lights` ||
-                        fname === `${room.room.toLowerCase()} all` ||
-                        fname.endsWith(" all");
-                      return !(isAllSuffix || isRoomGroup || isFriendlyAll);
-                    })
-                    .map((l) => {
+            {/* Fixtures grid — hidden when only a single fixture (Master already controls it) */}
+            {(() => {
+              const individualLights = room.lights.filter((l) => {
+                const id = l.entity_id.toLowerCase();
+                const fname = (l.attributes?.friendly_name ?? "").toLowerCase();
+                const roomSlug = room.room.toLowerCase().replace(/\s+/g, "_");
+                const roomCompact = room.room.toLowerCase().replace(/\s+/g, "");
+                const isAllSuffix = /(_all|_lights|_group)$/.test(id);
+                const isRoomGroup =
+                  id === `light.${roomSlug}` || id === `light.${roomCompact}`;
+                const isFriendlyAll =
+                  fname === `${room.room.toLowerCase()} lights` ||
+                  fname === `${room.room.toLowerCase()} all` ||
+                  fname.endsWith(" all");
+                return !(isAllSuffix || isRoomGroup || isFriendlyAll);
+              });
+              if (individualLights.length <= 1) return null;
+              return (
+                <section>
+                  <div className="flex items-baseline justify-between mb-5">
+                    <Label>Fixtures</Label>
+                    <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                      Tap icon · drag to dim
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {individualLights.map((l) => {
                       const on = isOn(l);
                       const rawBrightness = (l.attributes?.brightness as number) ?? 0;
                       const level = Math.round((rawBrightness / 255) * 100);
@@ -543,9 +543,10 @@ const RoomDetailsTray = ({
                         />
                       );
                     })}
-                </div>
-              </section>
-            )}
+                  </div>
+                </section>
+              );
+            })()}
 
             {/* Other devices */}
             {(() => {
