@@ -469,22 +469,22 @@ const NowPlaying = () => {
             <SkipForward className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-1 ml-6">
-          <Volume2 className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
-          <div
-            className="flex-1 h-px bg-surface-inset relative cursor-pointer"
-            onClick={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              const pct = Math.round(((e.clientX - r.left) / r.width) * 100);
+        <div className="flex items-center gap-3 flex-1 ml-6">
+          <Volume2 className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+          <Slider
+            value={[vol]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={(v) =>
               callService("media_player", "volume_set", {
                 entity_id: playing.entity_id,
-                volume_level: Math.max(0, Math.min(100, pct)) / 100,
-              });
-            }}
-          >
-            <div className="h-px bg-foreground-dim" style={{ width: `${vol}%` }} />
-          </div>
-          <span className="mono text-[10px] text-foreground-dim num w-6 text-right">{vol}</span>
+                volume_level: v[0] / 100,
+              })
+            }
+            className="flex-1"
+          />
+          <span className="mono text-[10px] text-foreground-dim num w-7 text-right">{vol}</span>
         </div>
       </div>
     </Panel>
