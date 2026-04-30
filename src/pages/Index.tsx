@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-  Activity, Bell, ChevronRight, DoorClosed, Fingerprint,
+  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
-  Video, Volume2, Wind, Car
+  Video, Volume2, Wind, Car, X
 } from "lucide-react";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
