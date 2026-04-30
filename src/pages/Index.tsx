@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fan, Fingerprint,
+  Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, Wind, Car, X, Pencil, EyeOff, Eye, Check
@@ -1182,7 +1182,7 @@ const AirPurifierQuickCard = () => {
 /* ——— Quick Controls section ——— */
 
 const QuickControls = () => {
-  const { rooms, bedroomFan, garageCover, airPurifier, lights } = useDiscovery();
+  const { rooms, garageCover, airPurifier, lights } = useDiscovery();
   const { callService } = useHa();
 
   // Fallback matcher in case the room bundle missed (e.g. friendly_name based grouping)
@@ -1231,26 +1231,7 @@ const QuickControls = () => {
     );
   };
 
-  const fanTile = bedroomFan
-    ? (() => {
-        const on = bedroomFan.state === "on";
-        return (
-          <QuickTile
-            key="bedroom-fan"
-            icon={Fan}
-            label="Bedroom Fan"
-            status={on ? "On" : "Off"}
-            active={on}
-            tone="ok"
-            onClick={() =>
-              callService("fan", on ? "turn_off" : "turn_on", {
-                entity_id: bedroomFan.entity_id,
-              })
-            }
-          />
-        );
-      })()
-    : null;
+
 
   const garageTile = garageCover
     ? (() => {
@@ -1317,7 +1298,6 @@ const QuickControls = () => {
     purifierTile,
     garageTile,
     frontDoorTile,
-    fanTile,
   ].filter(Boolean);
 
   if (tiles.length === 0) return null;
