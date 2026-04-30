@@ -350,23 +350,62 @@ const Security = () => (
   </Panel>
 );
 
+const garageHistory = [
+  { t: "18:42", dir: "in" as const, label: "Closed · Vehicle parked" },
+  { t: "18:38", dir: "in" as const, label: "Opened · Vehicle arrived" },
+  { t: "08:14", dir: "out" as const, label: "Closed · Departure" },
+  { t: "08:12", dir: "out" as const, label: "Opened · Departure" },
+  { t: "Yesterday 19:50", dir: "in" as const, label: "Closed · Vehicle parked" },
+];
+
 const Garage = () => {
   const [open, setOpen] = useState(false);
   return (
-    <Panel>
-      <div className="flex items-center justify-between mb-4">
+    <Panel padding="p-0">
+      <div className="flex items-center justify-between p-4 pb-3">
         <Label>Garage · LiftMaster / ratgdo32</Label>
-        <StatusDot state={open ? "active" : "idle"} />
-      </div>
-      <div className="flex items-center gap-4">
-        <Car className="w-8 h-8 text-foreground-dim" strokeWidth={1.25} />
-        <div className="flex-1">
-          <div className="text-[14px] font-medium">Bay 01 — {open ? "Open" : "Closed"}</div>
-          <div className="mono text-[10px] text-foreground-mute mt-0.5">Last: 18:42 · Vehicle present</div>
+        <div className="flex items-center gap-2">
+          <StatusDot state={open ? "active" : "idle"} />
+          <span className={`mono text-[10px] ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
+            {open ? "OPEN" : "SECURED"}
+          </span>
         </div>
-        <TactileButton active={open} onClick={() => setOpen(!open)} className="!px-4 !py-2">
+      </div>
+
+      <div className="px-4 pb-4 flex items-center gap-4 border-b border-hairline">
+        <div className="w-14 h-14 border border-hairline-strong grid place-items-center bg-surface-inset relative">
+          <Car className={`w-6 h-6 ${open ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.25} />
+          {open && <div className="absolute inset-0 border border-odin-accent/60" style={{ boxShadow: "0 0 14px hsl(var(--accent) / 0.3) inset" }} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[14px] font-medium">Bay 01 — {open ? "Open" : "Closed"}</div>
+          <div className="mono text-[10px] text-foreground-mute mt-0.5">
+            Vehicle present · Tesla Model S · 87% charged
+          </div>
+        </div>
+        <TactileButton active={open} onClick={() => setOpen(!open)} className="!px-5 !py-3">
           {open ? "Close" : "Open"}
         </TactileButton>
+      </div>
+
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Label>Presence · Last 24h</Label>
+          <span className="mono text-[10px] text-foreground-mute">5 EVENTS</span>
+        </div>
+        <ul className="space-y-1">
+          {garageHistory.map((h, i) => (
+            <li key={i} className="flex items-center gap-3 py-1.5 border-b border-hairline/60 last:border-b-0">
+              <div className={`w-5 h-5 grid place-items-center ${h.dir === "in" ? "text-odin-accent" : "text-foreground-mute"}`}>
+                {h.dir === "in"
+                  ? <ArrowDownToLine className="w-3 h-3" strokeWidth={1.5} />
+                  : <ArrowUpFromLine className="w-3 h-3" strokeWidth={1.5} />}
+              </div>
+              <span className="mono text-[10px] text-foreground-mute num w-32">{h.t}</span>
+              <span className="text-[12px] text-foreground-dim flex-1 truncate">{h.label}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </Panel>
   );
