@@ -13,6 +13,9 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(
+    () => localStorage.getItem("odin.stay_logged_in") !== "false",
+  );
 
   useEffect(() => {
     if (!loading && session) nav("/", { replace: true });
