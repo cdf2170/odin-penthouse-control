@@ -1231,26 +1231,7 @@ const QuickControls = () => {
     );
   };
 
-  const fanTile = bedroomFan
-    ? (() => {
-        const on = bedroomFan.state === "on";
-        return (
-          <QuickTile
-            key="bedroom-fan"
-            icon={Fan}
-            label="Bedroom Fan"
-            status={on ? "On" : "Off"}
-            active={on}
-            tone="ok"
-            onClick={() =>
-              callService("fan", on ? "turn_off" : "turn_on", {
-                entity_id: bedroomFan.entity_id,
-              })
-            }
-          />
-        );
-      })()
-    : null;
+
 
   const garageTile = garageCover
     ? (() => {
