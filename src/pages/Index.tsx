@@ -3,7 +3,8 @@ import {
   Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
-  Video, Volume2, Wind, Car, X, Pencil, EyeOff, Eye, Check
+  Video, Volume2, VolumeX, Volume1, Wind, Car, X, Pencil, EyeOff, Eye, Check,
+  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
