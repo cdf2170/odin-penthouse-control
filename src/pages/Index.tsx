@@ -1182,13 +1182,30 @@ const AirPurifierQuickCard = () => {
 /* ——— Quick Controls section ——— */
 
 const QuickControls = () => {
-  const { rooms, bedroomFan, garageCover, airPurifier } = useDiscovery();
+  const { rooms, bedroomFan, garageCover, airPurifier, lights } = useDiscovery();
   const { callService } = useHa();
 
-  const lightsTile = (room: string, label: string, icon: any) => {
+  // Fallback matcher in case the room bundle missed (e.g. friendly_name based grouping)
+  const findRoomLights = (room: string) => {
     const r = rooms.find((x) => x.room === room);
-    if (!r || r.lights.length === 0) return null;
-    const onLights = r.lights.filter(isOn);
+    if (r && r.lights.length > 0) return r.lights;
+    const slug = room.toLowerCase().replace(/\s+/g, "_");
+    const compact = room.toLowerCase().replace(/\s+/g, "");
+    return lights.filter((l) => {
+      const id = l.entity_id.toLowerCase();
+      const name = (l.attributes?.friendly_name ?? "").toString().toLowerCase();
+      return (
+        id.includes(slug) ||
+        id.includes(compact) ||
+        name.includes(room.toLowerCase())
+      );
+    });
+  };
+
+  const lightsTile = (room: string, label: string, icon: any) => {
+    const roomLights = findRoomLights(room);
+    if (roomLights.length === 0) return null;
+    const onLights = roomLights.filter(isOn);
     const active = onLights.length > 0;
     const totalBrightness = onLights.reduce(
       (acc, l) => acc + ((l.attributes?.brightness as number) ?? 0),
@@ -1207,7 +1224,7 @@ const QuickControls = () => {
         tone="amber"
         onClick={() =>
           callService("light", active ? "turn_off" : "turn_on", {
-            entity_id: r.lights.map((l) => l.entity_id),
+            entity_id: roomLights.map((l) => l.entity_id),
           })
         }
       />
