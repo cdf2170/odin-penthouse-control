@@ -132,9 +132,10 @@ export function useDiscovery() {
           !/all$/.test(norm(l.entity_id)) &&
           !/\ball\b/.test((l.attributes?.friendly_name ?? "").toLowerCase()),
       );
-      const rLights = override?.lights
+      const overrideLights = override?.lights
         ? (override.lights as string[]).map((id) => states[id]).filter(Boolean)
-        : matchedLights;
+        : [];
+      const rLights = overrideLights.length > 0 ? overrideLights : matchedLights;
       const rScenes = override?.scenes
         ? Object.entries(override.scenes as Record<string, string>).map(
             ([name, id]) => ({ name, entity: id, state: states[id] }),
