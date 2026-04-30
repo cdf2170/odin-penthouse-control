@@ -979,19 +979,30 @@ const Security = () => {
       {all.length === 0 ? (
         <div className="text-[12px] text-foreground-mute py-2">No sensors discovered</div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
+        <div className="grid grid-cols-1 gap-y-1">
           {all.map((s) => {
             const open = s.state === "on";
             const isMotion =
               s.attributes?.device_class === "motion" || s.attributes?.device_class === "occupancy";
+            const name = friendly(s);
+            const isGarage = /garage/i.test(name);
             const Icon = isMotion ? Activity : DoorClosed;
+            const label = isMotion
+              ? open
+                ? "ACTIVE"
+                : isGarage
+                  ? "CLOSED"
+                  : "CLEAR"
+              : open
+                ? "OPEN"
+                : "CLOSED";
             return (
               <div key={s.entity_id} className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60">
-                <Icon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
-                <span className="text-[12px] flex-1 truncate">{friendly(s)}</span>
+                <Icon className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                <span className="text-[12px] flex-1 min-w-0 truncate">{name}</span>
                 <StatusDot state={open ? (isMotion ? "active" : "alert") : "ok"} />
-                <span className="mono text-[10px] text-foreground-dim w-14 text-right">
-                  {isMotion ? (open ? "ACTIVE" : "CLEAR") : open ? "OPEN" : "CLOSED"}
+                <span className="mono text-[10px] text-foreground-dim w-16 text-right shrink-0">
+                  {label}
                 </span>
               </div>
             );
