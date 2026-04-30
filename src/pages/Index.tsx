@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowDownToLine, ArrowUpFromLine, Bell, ChevronRight, DoorClosed, Fingerprint,
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
-  Video, Volume2, Wind, Car, X
+  Video, Volume2, Wind, Car, X, Pencil, EyeOff, Eye, Check
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
 import LiveInspector from "@/components/odin/LiveInspector";
@@ -188,12 +189,13 @@ type RoomLive = ReturnType<typeof useDiscovery>["rooms"][number];
 const RoomPanel = ({
   room,
   accent,
-  onOpenScenes,
+  onOpenDetails,
 }: {
   room: RoomLive;
   accent?: boolean;
-  onOpenScenes?: () => void;
+  onOpenDetails: () => void;
 }) => {
+  const { callService } = useHa();
   const onLights = room.lights.filter(isOn);
   const totalBrightness = onLights.reduce(
     (acc, l) => acc + ((l.attributes?.brightness as number) ?? 0),
@@ -204,100 +206,214 @@ const RoomPanel = ({
     : 0;
   const occupied = room.occupancy?.state === "on";
   const playing = room.mediaPlayer?.state === "playing";
+  const anyOn = onLights.length > 0;
+
+  const toggleAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (room.lights.length === 0) return;
+    callService("light", anyOn ? "turn_off" : "turn_on", {
+      entity_id: room.lights.map((l) => l.entity_id),
+    });
+  };
 
   return (
-    <button onClick={onOpenScenes} className="text-left w-full group" disabled={!room.scenes.length}>
-      <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors group-hover:border-hairline-strong`}>
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-medium tracking-[0.04em] truncate">{room.room}</h3>
-              <StatusDot state={occupied ? "active" : "idle"} />
-            </div>
-            <div className="label mt-1.5">
-              {occupied ? "Occupied" : "Vacant"} · {onLights.length}/{room.lights.length} fixtures
-              {playing ? " · Audio active" : ""}
-            </div>
+    <div className={`panel ${accent ? "panel-accent" : ""} p-5 transition-colors hover:border-hairline-strong`}>
+      <div className="flex items-start justify-between mb-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[15px] font-medium tracking-[0.04em] truncate">{room.room}</h3>
+            <StatusDot state={occupied ? "active" : "idle"} />
           </div>
-          <div className="text-right">
-            <div className="mono text-[20px] num leading-none">{room.scenes.length}</div>
-            <div className="label mt-1.5">Scenes</div>
+          <div className="label mt-1.5">
+            {occupied ? "Occupied" : "Vacant"} · {onLights.length}/{room.lights.length} fixtures
+            {playing ? " · Audio" : ""}
           </div>
         </div>
-
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <Label>{room.scenes.length ? "Scenes" : "Status"}</Label>
-            <div className="text-[15px] font-medium mt-1.5 tracking-[0.02em]">
-              {room.scenes.length ? `${room.scenes.length} available` : onLights.length ? "Lights on" : "Idle"}
-            </div>
-          </div>
-          {room.scenes.length > 0 && (
-            <div className="flex items-center gap-1.5 text-foreground-mute group-hover:text-odin-accent transition-colors">
-              <span className="mono text-[10px] uppercase tracking-[0.14em]">Adjust</span>
-              <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
-            </div>
-          )}
-        </div>
-
-        <div className="h-1 bg-surface-inset relative overflow-hidden">
-          <div className="h-full" style={{
-            width: `${avgLevel}%`,
-            background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-            boxShadow: avgLevel > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
-          }} />
-        </div>
-        <div className="flex items-center justify-between mt-1.5">
-          <span className="label">Lighting</span>
-          <span className="mono text-[10px] text-foreground-dim num">{avgLevel}%</span>
-        </div>
+        <button
+          onClick={onOpenDetails}
+          className="flex items-center gap-1.5 text-foreground-mute hover:text-odin-accent transition-colors shrink-0"
+          aria-label={`Open ${room.room} details`}
+        >
+          <span className="mono text-[10px] uppercase tracking-[0.14em]">Details</span>
+          <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+        </button>
       </div>
-    </button>
+
+      <button
+        onClick={toggleAll}
+        disabled={room.lights.length === 0}
+        className={`btn-tactile w-full px-3 py-2.5 text-[11px] tracking-[0.14em] uppercase flex items-center justify-center gap-2 mb-3 ${anyOn ? "active" : "text-foreground-dim"} disabled:opacity-40`}
+      >
+        <Power className="w-3.5 h-3.5" strokeWidth={1.5} />
+        {room.lights.length === 0 ? "No lights" : anyOn ? "All On · Tap to Off" : "All Off · Tap to On"}
+      </button>
+
+      <div className="h-1 bg-surface-inset relative overflow-hidden">
+        <div className="h-full transition-[width] duration-300" style={{
+          width: `${avgLevel}%`,
+          background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+          boxShadow: avgLevel > 0 ? "0 0 12px hsl(var(--accent) / 0.5)" : "none",
+        }} />
+      </div>
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="label">Avg Brightness</span>
+        <span className="mono text-[10px] text-foreground-dim num">{avgLevel}%</span>
+      </div>
+    </div>
   );
 };
 
-type SceneTarget = { room: string; options: { name: string; entity: string }[] };
+/* ——— Full room details tray (scenes + per-fixture controls + media) ——— */
 
-const SceneTray = ({
-  target,
+const RoomDetailsTray = ({
+  room,
   onClose,
-  onChoose,
 }: {
-  target: SceneTarget | null;
+  room: RoomLive | null;
   onClose: () => void;
-  onChoose: (entity: string) => void;
 }) => {
-  if (!target) return null;
+  const { callService } = useHa();
+  if (!room) return null;
+
+  const onLights = room.lights.filter(isOn);
+  const anyOn = onLights.length > 0;
+
+  const toggleAll = () =>
+    callService("light", anyOn ? "turn_off" : "turn_on", {
+      entity_id: room.lights.map((l) => l.entity_id),
+    });
+
+  const toggleOne = (entity_id: string, on: boolean) =>
+    callService("light", on ? "turn_off" : "turn_on", { entity_id });
+
+  const setLevel = (entity_id: string, pct: number) =>
+    callService("light", "turn_on", { entity_id, brightness_pct: pct });
+
+  const engageScene = (entity: string) =>
+    callService("scene", "turn_on", { entity_id: entity });
+
+  const mp = room.mediaPlayer;
+  const mpVol = mp ? Math.round(((mp.attributes?.volume_level as number) ?? 0) * 100) : 0;
+
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
       <div className="flex-1 bg-black/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[420px] bg-background border-l border-hairline-strong shadow-2xl flex flex-col"
+        className="w-[460px] bg-background border-l border-hairline-strong shadow-2xl flex flex-col"
       >
-        <div className="flex items-center justify-between px-6 h-16 border-b border-hairline">
+        <div className="flex items-center justify-between px-6 h-16 border-b border-hairline shrink-0">
           <div>
-            <Label>Scenes</Label>
-            <div className="text-[16px] font-medium mt-1 tracking-[0.04em]">{target.room}</div>
+            <Label>Room Controls</Label>
+            <div className="text-[16px] font-medium mt-1 tracking-[0.04em]">{room.room}</div>
           </div>
           <button onClick={onClose} className="w-9 h-9 grid place-items-center text-foreground-dim hover:text-foreground border border-hairline-strong">
             <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
-        <div className="p-6 space-y-2 flex-1 overflow-auto">
-          {target.options.map((s) => (
+
+        <div className="flex-1 overflow-auto">
+          <div className="px-6 py-5 border-b border-hairline">
+            <div className="flex items-center justify-between mb-3">
+              <Label>All Fixtures</Label>
+              <span className="mono text-[10px] text-foreground-mute num">{onLights.length}/{room.lights.length} ON</span>
+            </div>
             <button
-              key={s.entity}
-              onClick={() => { onChoose(s.entity); onClose(); }}
-              className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors border bg-surface border-hairline hover:border-hairline-strong text-foreground-dim"
+              onClick={toggleAll}
+              disabled={room.lights.length === 0}
+              className={`btn-tactile w-full px-3 py-3 text-[12px] tracking-[0.14em] uppercase flex items-center justify-center gap-2 ${anyOn ? "active" : "text-foreground-dim"} disabled:opacity-40`}
             >
-              <span className="text-[15px] tracking-[0.02em]">{s.name}</span>
-              <span className="mono text-[10px] text-foreground-mute uppercase tracking-[0.14em]">Engage</span>
+              <Power className="w-4 h-4" strokeWidth={1.5} />
+              {anyOn ? "Turn All Off" : "Turn All On"}
             </button>
-          ))}
-          {target.options.length === 0 && (
-            <div className="text-[12px] text-foreground-mute text-center py-6">
-              No scenes for this room.
+          </div>
+
+          {room.scenes.length > 0 && (
+            <div className="px-6 py-5 border-b border-hairline">
+              <SectionHead title="Scenes" meta={`${room.scenes.length} AVAILABLE`} />
+              <div className="grid grid-cols-2 gap-2">
+                {room.scenes.map((s) => (
+                  <button
+                    key={s.entity}
+                    onClick={() => engageScene(s.entity)}
+                    className="px-3 py-3 text-left text-[13px] border bg-surface border-hairline hover:border-odin-accent hover:text-odin-accent transition-colors"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {room.lights.length > 0 && (
+            <div className="px-6 py-5 border-b border-hairline">
+              <SectionHead title="Fixtures" meta="TAP TO TOGGLE · DRAG TO DIM" />
+              <div className="space-y-4">
+                {room.lights.map((l) => {
+                  const on = isOn(l);
+                  const level = on ? Math.round((((l.attributes?.brightness as number) ?? 0) / 255) * 100) : 0;
+                  return (
+                    <div key={l.entity_id} className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleOne(l.entity_id, on)}
+                          className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
+                        >
+                          <Lightbulb className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                        </button>
+                        <span className="text-[13px] flex-1 truncate">{friendly(l)}</span>
+                        <span className="mono text-[10px] text-foreground-mute num w-9 text-right">{level}%</span>
+                      </div>
+                      <Slider
+                        value={[level]}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onValueChange={(v) => setLevel(l.entity_id, v[0])}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {mp && (
+            <div className="px-6 py-5">
+              <SectionHead title={`Audio · ${friendly(mp)}`} meta={mp.state.toUpperCase()} />
+              <div className="flex items-center gap-2 mb-3">
+                <button onClick={() => callService("media_player", "media_previous_track", { entity_id: mp.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
+                  <SkipBack className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={() => callService("media_player", "media_play_pause", { entity_id: mp.entity_id })}
+                  className={`w-10 h-10 grid place-items-center btn-tactile ${mp.state === "playing" ? "active" : ""}`}
+                >
+                  {mp.state === "playing"
+                    ? <Pause className="w-4 h-4" strokeWidth={1.5} />
+                    : <Play className="w-4 h-4" strokeWidth={1.5} />}
+                </button>
+                <button onClick={() => callService("media_player", "media_next_track", { entity_id: mp.entity_id })} className="w-8 h-8 grid place-items-center text-foreground-dim hover:text-foreground transition-colors">
+                  <SkipForward className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <Volume2 className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
+                <Slider
+                  value={[mpVol]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) =>
+                    callService("media_player", "volume_set", {
+                      entity_id: mp.entity_id,
+                      volume_level: v[0] / 100,
+                    })
+                  }
+                  className="flex-1"
+                />
+                <span className="mono text-[10px] text-foreground-dim num w-8 text-right">{mpVol}</span>
+              </div>
             </div>
           )}
         </div>
@@ -353,22 +469,22 @@ const NowPlaying = () => {
             <SkipForward className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-1 ml-6">
-          <Volume2 className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
-          <div
-            className="flex-1 h-px bg-surface-inset relative cursor-pointer"
-            onClick={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              const pct = Math.round(((e.clientX - r.left) / r.width) * 100);
+        <div className="flex items-center gap-3 flex-1 ml-6">
+          <Volume2 className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+          <Slider
+            value={[vol]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={(v) =>
               callService("media_player", "volume_set", {
                 entity_id: playing.entity_id,
-                volume_level: Math.max(0, Math.min(100, pct)) / 100,
-              });
-            }}
-          >
-            <div className="h-px bg-foreground-dim" style={{ width: `${vol}%` }} />
-          </div>
-          <span className="mono text-[10px] text-foreground-dim num w-6 text-right">{vol}</span>
+                volume_level: v[0] / 100,
+              })
+            }
+            className="flex-1"
+          />
+          <span className="mono text-[10px] text-foreground-dim num w-7 text-right">{vol}</span>
         </div>
       </div>
     </Panel>
@@ -669,25 +785,123 @@ const Voice = () => {
   );
 };
 
+const SCENE_PREFS_KEY = "odin.residenceScenes.v1";
+type ScenePrefs = { enabled: boolean; selected: string[] };
+
+const loadScenePrefs = (): ScenePrefs => {
+  try {
+    const raw = localStorage.getItem(SCENE_PREFS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { enabled: true, selected: [] };
+};
+
 const GlobalScenes = () => {
   const { scenes: allScenes } = useDiscovery();
   const { callService } = useHa();
-  const top = allScenes.slice(0, 7);
+  const [prefs, setPrefs] = useState<ScenePrefs>(loadScenePrefs);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem(SCENE_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+  }, [prefs]);
+
+  // Initialize selection on first load if empty
+  useEffect(() => {
+    if (prefs.selected.length === 0 && allScenes.length > 0) {
+      setPrefs((p) => ({ ...p, selected: allScenes.slice(0, 6).map((s) => s.entity_id) }));
+    }
+  }, [allScenes.length]);
+
+  const visible = useMemo(
+    () => allScenes.filter((s) => prefs.selected.includes(s.entity_id)),
+    [allScenes, prefs.selected],
+  );
+
+  if (!prefs.enabled && !editing) {
+    return (
+      <Panel accent>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Residence Scenes</Label>
+            <div className="text-[13px] text-foreground-dim mt-1.5">Hidden · enable to show shortcuts</div>
+          </div>
+          <button
+            onClick={() => setPrefs((p) => ({ ...p, enabled: true }))}
+            className="btn-tactile px-3 py-1.5 text-[11px] tracking-[0.14em] uppercase text-foreground-dim flex items-center gap-2"
+          >
+            <Eye className="w-3 h-3" strokeWidth={1.5} /> Enable
+          </button>
+        </div>
+      </Panel>
+    );
+  }
+
   return (
     <Panel accent>
       <div className="flex items-start justify-between mb-5">
         <div>
           <Label>Residence Scenes</Label>
-          <div className="text-[16px] font-medium mt-2 tracking-[0.04em]">{top.length} available</div>
-          <div className="text-[12px] text-foreground-dim mt-1">Tap to engage · live via Home Assistant</div>
+          <div className="text-[16px] font-medium mt-2 tracking-[0.04em]">
+            {editing ? `${prefs.selected.length} selected` : `${visible.length} pinned`}
+          </div>
+          <div className="text-[12px] text-foreground-dim mt-1">
+            {editing ? "Tap to pin / unpin · live via Home Assistant" : "Tap to engage · pin your favorites"}
+          </div>
         </div>
-        <Power className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
+        <div className="flex items-center gap-1.5">
+          {editing && (
+            <button
+              onClick={() => setPrefs((p) => ({ ...p, enabled: !p.enabled }))}
+              className="btn-tactile px-2.5 py-1.5 text-[10px] tracking-[0.14em] uppercase text-foreground-dim flex items-center gap-1.5"
+              title={prefs.enabled ? "Hide widget" : "Show widget"}
+            >
+              {prefs.enabled ? <EyeOff className="w-3 h-3" strokeWidth={1.5} /> : <Eye className="w-3 h-3" strokeWidth={1.5} />}
+              {prefs.enabled ? "Disable" : "Enable"}
+            </button>
+          )}
+          <button
+            onClick={() => setEditing((e) => !e)}
+            className={`btn-tactile px-2.5 py-1.5 text-[10px] tracking-[0.14em] uppercase flex items-center gap-1.5 ${editing ? "active" : "text-foreground-dim"}`}
+          >
+            {editing ? <Check className="w-3 h-3" strokeWidth={1.5} /> : <Pencil className="w-3 h-3" strokeWidth={1.5} />}
+            {editing ? "Done" : "Edit"}
+          </button>
+        </div>
       </div>
-      {top.length === 0 ? (
-        <div className="text-[12px] text-foreground-mute">No global scenes found</div>
+
+      {editing ? (
+        allScenes.length === 0 ? (
+          <div className="text-[12px] text-foreground-mute">No scenes found</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 max-h-[260px] overflow-auto pr-1">
+            {allScenes.map((s) => {
+              const picked = prefs.selected.includes(s.entity_id);
+              return (
+                <button
+                  key={s.entity_id}
+                  onClick={() =>
+                    setPrefs((p) => ({
+                      ...p,
+                      selected: picked
+                        ? p.selected.filter((e) => e !== s.entity_id)
+                        : [...p.selected, s.entity_id],
+                    }))
+                  }
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left text-[12px] border transition-colors ${picked ? "border-odin-accent text-foreground bg-surface-raised" : "border-hairline text-foreground-dim hover:border-hairline-strong"}`}
+                >
+                  <span className="truncate">{friendly(s)}</span>
+                  {picked && <Check className="w-3 h-3 text-odin-accent shrink-0" strokeWidth={2} />}
+                </button>
+              );
+            })}
+          </div>
+        )
+      ) : visible.length === 0 ? (
+        <div className="text-[12px] text-foreground-mute">No scenes pinned · tap Edit to add</div>
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          {top.map((s) => (
+          {visible.map((s) => (
             <TactileButton
               key={s.entity_id}
               onClick={() => callService("scene", "turn_on", { entity_id: s.entity_id })}
@@ -732,8 +946,13 @@ const ActivityLog = () => {
 
 const OverviewView = () => {
   const { rooms } = useDiscovery();
-  const { callService } = useHa();
-  const [tray, setTray] = useState<SceneTarget | null>(null);
+  const [activeRoom, setActiveRoom] = useState<RoomLive | null>(null);
+
+  // Keep tray in sync with live discovery updates
+  const liveActiveRoom = useMemo(
+    () => (activeRoom ? rooms.find((r) => r.room === activeRoom.room) ?? null : null),
+    [rooms, activeRoom],
+  );
 
   return (
     <div className="flex-1 flex min-h-0">
@@ -741,18 +960,14 @@ const OverviewView = () => {
         <GlobalScenes />
         {rooms.length > 0 && (
           <div>
-            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP TO ADJUST`} />
+            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP DETAILS FOR FULL CONTROL`} />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {rooms.map((r, i) => (
                 <RoomPanel
                   key={r.room}
                   room={r}
                   accent={i === 0}
-                  onOpenScenes={
-                    r.scenes.length
-                      ? () => setTray({ room: r.room, options: r.scenes.map((s) => ({ name: s.name, entity: s.entity })) })
-                      : undefined
-                  }
+                  onOpenDetails={() => setActiveRoom(r)}
                 />
               ))}
             </div>
@@ -767,11 +982,7 @@ const OverviewView = () => {
         <LiveInspector />
       </section>
 
-      <SceneTray
-        target={tray}
-        onClose={() => setTray(null)}
-        onChoose={(entity) => callService("scene", "turn_on", { entity_id: entity })}
-      />
+      <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
 
       <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
         <Climate /><NowPlaying /><Voice />
