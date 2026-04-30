@@ -29,7 +29,11 @@ const navItems: { icon: any; label: ViewKey }[] = [
   { icon: Mic, label: "Voice" },
 ];
 
-const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => (
+const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => {
+  const { connected, error, states } = useHa();
+  const { user, signOut } = useAuth();
+  const entityCount = Object.keys(states).length;
+  return (
   <aside className="w-[232px] shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
     <div className="px-6 pt-7 pb-8">
       <div className="flex items-center gap-2.5">
