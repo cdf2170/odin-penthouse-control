@@ -55,8 +55,9 @@ Deno.serve(async (req) => {
 
     const eventLists = await Promise.all(
       calendars.map(async (cal: any) => {
+        const calId = encodeURIComponent(cal.id).replace(/%40/g, "@");
         const r = await fetch(
-          `${GATEWAY_URL}/calendars/${encodeURIComponent(cal.id)}/events?${params}`,
+          `${GATEWAY_URL}/calendars/${calId}/events?${params}`,
           { headers },
         );
         if (!r.ok) return [];
