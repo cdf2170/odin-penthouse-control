@@ -454,7 +454,7 @@ const RoomDetailsTray = ({
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-medium tracking-[0.02em]">
-                      All {room.room} Lights
+                      {room.room} Lights
                     </div>
                     <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-1 num">
                       {anyOn ? `${onLights.length} on` : "All off"}
