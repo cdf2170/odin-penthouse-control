@@ -1190,6 +1190,7 @@ const OverviewView = () => {
   return (
     <div className="flex-1 flex min-h-0">
       <section className="flex-1 p-8 space-y-6 overflow-auto">
+        <QuickControls />
         <GlobalScenes />
         {rooms.length > 0 && (
           <div>
