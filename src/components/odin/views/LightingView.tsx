@@ -65,9 +65,9 @@ export default function LightingView() {
   const [activeRoomIdx, setActiveRoomIdx] = useState(0);
 
   // Fall back to single "All" room if no per-room grouping found
-  const effectiveRooms = useMemo(() => {
+  const effectiveRooms = useMemo<typeof rooms>(() => {
     if (rooms.length === 0 && lights.length > 0) {
-      return [{ room: "All Lighting", lights, scenes: [], occupancy: undefined as any, mediaPlayer: undefined as any, switches: [], fans: [], covers: [] }];
+      return [{ room: "All Lighting", lights, scenes: [], occupancy: undefined as any, mediaPlayer: undefined as any, switches: [], fans: [], covers: [] }] as unknown as typeof rooms;
     }
     return rooms;
   }, [rooms, lights]);
