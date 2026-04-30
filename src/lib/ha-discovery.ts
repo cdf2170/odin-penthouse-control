@@ -85,22 +85,29 @@ export function useDiscovery() {
       /(purifier|air)/.test(norm(f.attributes?.friendly_name ?? f.entity_id)),
     );
 
-    // Discover rooms: union of mapping room names + areas inferred from light area_ids
-    const roomNames = new Set<string>(Object.keys(haMap.rooms));
-    for (const l of lights) {
-      const fn = l.attributes?.friendly_name as string | undefined;
-      if (fn) {
-        // Take first 2 words as a guess (e.g. "Living Room Cove" → "Living Room")
-        const guess = fn.split(/\s+/).slice(0, 2).join(" ");
-        if (guess.length > 3) roomNames.add(guess);
-      }
-    }
+    // Fixed canonical room list — no auto-discovery to avoid duplicates like "Kitchen" vs "Kitchen All"
+    const ALLOWED_ROOMS = [
+      "Living Room",
+      "Bedroom",
+      "Kitchen",
+      "Second Floor Bathroom",
+      "Office",
+      "Garage",
+    ];
 
     const roomBundle = (room: string) => {
       const override = (haMap.rooms as Record<string, any>)[room];
+      const rn = norm(room);
+      // Match lights by room — but exclude obvious "all"/group entities to dedupe
+      const matchedLights = lights.filter(
+        (l) =>
+          matchRoom(l, room) &&
+          !/all$/.test(norm(l.entity_id)) &&
+          !/\ball\b/.test((l.attributes?.friendly_name ?? "").toLowerCase()),
+      );
       const rLights = override?.lights
         ? (override.lights as string[]).map((id) => states[id]).filter(Boolean)
-        : lights.filter((l) => matchRoom(l, room));
+        : matchedLights;
       const rScenes = override?.scenes
         ? Object.entries(override.scenes as Record<string, string>).map(
             ([name, id]) => ({ name, entity: id, state: states[id] }),
@@ -121,7 +128,9 @@ export function useDiscovery() {
       return { room, lights: rLights, scenes: rScenes, occupancy, mediaPlayer };
     };
 
-    const rooms = Array.from(roomNames).map(roomBundle).filter((r) => r.lights.length > 0 || r.scenes.length > 0);
+    const rooms = ALLOWED_ROOMS.map(roomBundle).filter(
+      (r) => r.lights.length > 0 || r.scenes.length > 0,
+    );
 
     // Climate zones: use override zones if any are present in states; else discover all climate.*
     const zonesFromMap = haMap.climate.zones

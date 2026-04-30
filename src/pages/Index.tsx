@@ -591,8 +591,28 @@ const AirPurifier = () => {
     );
   }
   const a = airPurifier.attributes ?? {};
-  const modes: string[] = (a.preset_modes as string[]) ?? ["sleep", "auto", "boost"];
-  const current = (a.preset_mode as string) ?? airPurifier.state;
+  const isOff = airPurifier.state === "off";
+  const preset = (a.preset_mode as string | undefined)?.toLowerCase();
+  // Normalize to On / Off / Auto only
+  const current: "off" | "auto" | "on" = isOff ? "off" : preset === "auto" ? "auto" : "on";
+
+  const setMode = (mode: "off" | "auto" | "on") => {
+    if (mode === "off") {
+      callService("fan", "turn_off", { entity_id: airPurifier.entity_id });
+    } else if (mode === "auto") {
+      callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
+      callService("fan", "set_preset_mode", { entity_id: airPurifier.entity_id, preset_mode: "Auto" });
+    } else {
+      callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
+    }
+  };
+
+  const modes: { key: "off" | "on" | "auto"; label: string }[] = [
+    { key: "off", label: "Off" },
+    { key: "on", label: "On" },
+    { key: "auto", label: "Auto" },
+  ];
+
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
@@ -603,14 +623,14 @@ const AirPurifier = () => {
         </div>
       </div>
       <div className="flex gap-1.5">
-        {modes.slice(0, 4).map((m) => (
+        {modes.map((m) => (
           <TactileButton
-            key={m}
-            active={current === m}
-            onClick={() => callService("fan", "set_preset_mode", { entity_id: airPurifier.entity_id, preset_mode: m })}
-            className="!flex-1 !py-2 capitalize"
+            key={m.key}
+            active={current === m.key}
+            onClick={() => setMode(m.key)}
+            className="!flex-1 !py-2"
           >
-            {m}
+            {m.label}
           </TactileButton>
         ))}
       </div>
