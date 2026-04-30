@@ -137,16 +137,34 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
 const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
   const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
   const date = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const { states, connected, error } = useHa();
+
+  // Find first weather.* entity
+  const weather = Object.values(states).find((s) => s.entity_id.startsWith("weather."));
+  const wTemp = (weather?.attributes?.temperature as number | undefined);
+  const wUnit = (weather?.attributes?.temperature_unit as string | undefined) ?? "°";
+  const wCond = weather?.state ?? "—";
+
+  const alarm = Object.values(states).find((s) => s.entity_id.startsWith("alarm_control_panel."));
+  const triggered = alarm?.state === "triggered" || alarm?.state === "pending";
+  const systemStatus = !connected
+    ? { text: error ? "Cloud Link Down" : "Connecting…", cls: "text-odin-alert" }
+    : triggered
+    ? { text: "Alarm Triggered", cls: "text-odin-alert" }
+    : { text: "All Systems Nominal", cls: "text-foreground-mute" };
+
   return (
     <header className="h-16 border-b border-hairline px-8 flex items-center justify-between bg-surface-inset/40">
       <div className="flex items-baseline gap-6">
         <h1 className="text-[18px] font-medium tracking-[0.04em]">{view}</h1>
-        <span className="text-[12px] text-foreground-mute uppercase tracking-[0.18em]">All Systems Nominal</span>
+        <span className={`text-[12px] uppercase tracking-[0.18em] ${systemStatus.cls}`}>{systemStatus.text}</span>
       </div>
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-2.5">
           <Sun className="w-4 h-4 text-foreground-dim" strokeWidth={1.5} />
-          <span className="mono text-[12px] text-foreground-dim num">68° EXT · CLEAR</span>
+          <span className="mono text-[12px] text-foreground-dim num">
+            {wTemp != null ? `${Math.round(wTemp)}${wUnit} EXT · ${wCond.toUpperCase()}` : "WEATHER UNAVAIL"}
+          </span>
         </div>
         <div className="text-right">
           <div className="mono text-[15px] num leading-none">{time}</div>
