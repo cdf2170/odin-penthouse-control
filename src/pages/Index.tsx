@@ -946,8 +946,13 @@ const ActivityLog = () => {
 
 const OverviewView = () => {
   const { rooms } = useDiscovery();
-  const { callService } = useHa();
-  const [tray, setTray] = useState<SceneTarget | null>(null);
+  const [activeRoom, setActiveRoom] = useState<RoomLive | null>(null);
+
+  // Keep tray in sync with live discovery updates
+  const liveActiveRoom = useMemo(
+    () => (activeRoom ? rooms.find((r) => r.room === activeRoom.room) ?? null : null),
+    [rooms, activeRoom],
+  );
 
   return (
     <div className="flex-1 flex min-h-0">
@@ -955,18 +960,14 @@ const OverviewView = () => {
         <GlobalScenes />
         {rooms.length > 0 && (
           <div>
-            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP TO ADJUST`} />
+            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP DETAILS FOR FULL CONTROL`} />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {rooms.map((r, i) => (
                 <RoomPanel
                   key={r.room}
                   room={r}
                   accent={i === 0}
-                  onOpenScenes={
-                    r.scenes.length
-                      ? () => setTray({ room: r.room, options: r.scenes.map((s) => ({ name: s.name, entity: s.entity })) })
-                      : undefined
-                  }
+                  onOpenDetails={() => setActiveRoom(r)}
                 />
               ))}
             </div>
@@ -981,11 +982,7 @@ const OverviewView = () => {
         <LiveInspector />
       </section>
 
-      <SceneTray
-        target={tray}
-        onClose={() => setTray(null)}
-        onChoose={(entity) => callService("scene", "turn_on", { entity_id: entity })}
-      />
+      <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
 
       <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
         <Climate /><NowPlaying /><Voice />
