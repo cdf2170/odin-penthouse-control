@@ -1170,36 +1170,143 @@ const AirPurifier = () => {
   );
 };
 
-const Voice = () => {
-  const { voiceSatellites } = useDiscovery();
-  if (voiceSatellites.length === 0) return null;
+type CalEvent = {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  location?: string;
+  calendar?: string;
+  color?: string;
+};
+
+const Calendar = () => {
+  const [range, setRange] = useState<"today" | "week">("today");
+  const [events, setEvents] = useState<CalEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-events?range=${range}`;
+    fetch(url, {
+      headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        if (d.error) setError(d.error);
+        else setEvents(d.events ?? []);
+      })
+      .catch((e) => !cancelled && setError(e.message))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
+
+  const fmtTime = (iso: string, allDay: boolean) => {
+    if (allDay) return "All day";
+    return new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+  const fmtDay = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+  // Group by day for week view
+  const grouped = useMemo(() => {
+    const map = new Map<string, CalEvent[]>();
+    for (const ev of events) {
+      const key = new Date(ev.start).toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ev);
+    }
+    return Array.from(map.entries());
+  }, [events]);
+
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
-        <Label>Voice Satellites</Label>
-        <Mic className="w-3 h-3 text-foreground-dim" strokeWidth={1.5} />
+        <Label>Calendar · {range === "today" ? "Today" : "This Week"}</Label>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setRange(range === "today" ? "week" : "today")}
+            aria-label={range === "today" ? "Show week" : "Show today"}
+            className="w-7 h-7 grid place-items-center text-foreground-dim hover:text-odin-accent border border-hairline-strong hover:border-odin-accent transition-colors"
+          >
+            <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
-      <div className="space-y-3">
-        {voiceSatellites.slice(0, 4).map((s) => {
-          const active = s.state.state === "listening" || s.state.state === "responding";
-          return (
-            <div key={s.state.entity_id} className="flex items-center gap-3">
-              <div className="w-9 h-9 border border-hairline-strong grid place-items-center relative">
-                <Mic className={`w-3.5 h-3.5 ${active ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.5} />
-                {active && <div className="absolute inset-0 border border-odin-accent" style={{ boxShadow: "0 0 12px hsl(var(--accent) / 0.4) inset" }} />}
-              </div>
+
+      {loading && (
+        <div className="text-[12px] text-foreground-mute py-4">Loading…</div>
+      )}
+      {error && (
+        <div className="text-[12px] text-odin-alert py-4 break-words">{error}</div>
+      )}
+      {!loading && !error && events.length === 0 && (
+        <div className="text-[12px] text-foreground-mute py-4">
+          No events {range === "today" ? "today" : "this week"}.
+        </div>
+      )}
+
+      {!loading && !error && events.length > 0 && range === "today" && (
+        <div className="space-y-3">
+          {events.slice(0, 6).map((ev) => (
+            <div key={ev.id} className="flex items-start gap-3">
+              <div
+                className="w-1 self-stretch shrink-0"
+                style={{ background: ev.color ?? "hsl(var(--accent))" }}
+              />
               <div className="flex-1 min-w-0">
-                <div className="text-[12px] truncate">{s.name}</div>
-                <div className="mono text-[10px] text-foreground-mute mt-0.5 uppercase">{s.state.state}</div>
+                <div className="text-[12px] truncate">{ev.summary}</div>
+                <div className="mono text-[10px] text-foreground-mute mt-0.5 uppercase truncate">
+                  {fmtTime(ev.start, ev.allDay)}
+                  {ev.location ? ` · ${ev.location}` : ""}
+                </div>
               </div>
-              <StatusDot state={active ? "active" : "idle"} />
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && events.length > 0 && range === "week" && (
+        <div className="space-y-4 max-h-[280px] overflow-auto pr-1">
+          {grouped.map(([day, evs]) => (
+            <div key={day}>
+              <div className="mono text-[10px] text-foreground-mute uppercase tracking-[0.18em] mb-2">
+                {fmtDay(evs[0].start)}
+              </div>
+              <div className="space-y-2">
+                {evs.map((ev) => (
+                  <div key={ev.id} className="flex items-start gap-3">
+                    <div
+                      className="w-1 self-stretch shrink-0"
+                      style={{ background: ev.color ?? "hsl(var(--accent))" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] truncate">{ev.summary}</div>
+                      <div className="mono text-[10px] text-foreground-mute mt-0.5 uppercase truncate">
+                        {fmtTime(ev.start, ev.allDay)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </Panel>
   );
 };
+
 
 const SCENE_PREFS_KEY = "odin.residenceScenes.v1";
 type ScenePrefs = { enabled: boolean; selected: string[] };
@@ -1710,7 +1817,7 @@ const OverviewView = () => {
       <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
 
       <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
-        <Climate /><NowPlaying /><Voice />
+        <Climate /><NowPlaying /><Calendar />
         <ActivityLog />
       </aside>
     </div>
