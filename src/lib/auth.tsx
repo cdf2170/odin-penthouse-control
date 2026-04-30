@@ -29,7 +29,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(data.session);
       setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+
+    // "Stay signed in" preference: if disabled, sign out when the tab/window closes.
+    const onUnload = () => {
+      if (localStorage.getItem("odin.stay_logged_in") === "false") {
+        // Synchronous cleanup of persisted session keys
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-") && k.endsWith("-auth-token"))
+          .forEach((k) => localStorage.removeItem(k));
+      }
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      sub.subscription.unsubscribe();
+      window.removeEventListener("beforeunload", onUnload);
+    };
   }, []);
 
   return (

@@ -13,6 +13,9 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(
+    () => localStorage.getItem("odin.stay_logged_in") !== "false",
+  );
 
   useEffect(() => {
     if (!loading && session) nav("/", { replace: true });
@@ -23,6 +26,8 @@ export default function Auth() {
     setErr(null);
     setBusy(true);
     try {
+      // Persist preference so the auth client can pick the right storage on next boot
+      localStorage.setItem("odin.stay_logged_in", String(stayLoggedIn));
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -104,6 +109,18 @@ export default function Auth() {
                 autoComplete={mode === "signin" ? "current-password" : "new-password"}
               />
             </div>
+
+            <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={stayLoggedIn}
+                onChange={(e) => setStayLoggedIn(e.target.checked)}
+                className="w-3.5 h-3.5 accent-odin-accent cursor-pointer"
+              />
+              <span className="label group-hover:text-foreground transition-colors">
+                Stay signed in on this device
+              </span>
+            </label>
 
             {err && (
               <div className="text-[12px] text-odin-accent border border-odin-accent/30 px-3 py-2 bg-odin-accent/5">
