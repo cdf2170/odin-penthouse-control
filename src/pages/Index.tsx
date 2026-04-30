@@ -7,6 +7,9 @@ import {
 } from "lucide-react";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
+import LiveInspector from "@/components/odin/LiveInspector";
+import { useHa } from "@/lib/ha-client";
+import { useAuth } from "@/lib/auth";
 import LightingView from "@/components/odin/views/LightingView";
 import ClimateView from "@/components/odin/views/ClimateView";
 import SecurityView from "@/components/odin/views/SecurityView";
