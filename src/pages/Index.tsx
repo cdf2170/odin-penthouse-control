@@ -311,10 +311,13 @@ const RoomDetailsTray = ({
         </div>
 
         <div className="flex-1 overflow-auto">
-          <div className="px-6 py-5 border-b border-hairline">
-            <div className="flex items-center justify-between mb-3">
-              <Label>All Fixtures</Label>
-              <span className="mono text-[10px] text-foreground-mute num">{onLights.length}/{room.lights.length} ON</span>
+          {/* Master controls */}
+          <div className="px-6 py-5 border-b border-hairline space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Room Master</Label>
+              <span className="mono text-[10px] text-foreground-mute num">
+                {onLights.length}/{room.lights.length} ON · {room.occupancy?.state === "on" ? "OCCUPIED" : "VACANT"}
+              </span>
             </div>
             <button
               onClick={toggleAll}
@@ -324,6 +327,26 @@ const RoomDetailsTray = ({
               <Power className="w-4 h-4" strokeWidth={1.5} />
               {anyOn ? "Turn All Off" : "Turn All On"}
             </button>
+            {room.lights.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="label">Master Brightness</span>
+                  <span className="mono text-[10px] text-odin-accent num">{avgLevel}%</span>
+                </div>
+                <Slider
+                  value={[avgLevel]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) =>
+                    callService("light", "turn_on", {
+                      entity_id: room.lights.map((l) => l.entity_id),
+                      brightness_pct: v[0],
+                    })
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {room.scenes.length > 0 && (
