@@ -1046,12 +1046,126 @@ const QuickTile = ({
   );
 };
 
+/* ——— Detailed quick cards (Garage, Air Purifier) ——— */
+
+const GarageQuickCard = () => {
+  const { garageCover } = useDiscovery();
+  const { callService } = useHa();
+  if (!garageCover) return null;
+  const open = garageCover.state === "open" || garageCover.state === "opening";
+  const moving = garageCover.state === "opening" || garageCover.state === "closing";
+  const last = garageCover.last_changed
+    ? new Date(garageCover.last_changed).toLocaleString("en-US", {
+        hour: "2-digit", minute: "2-digit", hour12: false, month: "short", day: "numeric",
+      })
+    : "—";
+  const toggle = () =>
+    callService("cover", open ? "close_cover" : "open_cover", {
+      entity_id: garageCover.entity_id,
+    });
+
+  return (
+    <Panel padding="p-0">
+      <div className="flex items-center justify-between p-4 pb-3">
+        <Label>Garage · {friendly(garageCover)}</Label>
+        <div className="flex items-center gap-2">
+          <StatusDot state={open ? "active" : "idle"} />
+          <span className={`mono text-[10px] uppercase ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
+            {garageCover.state}
+          </span>
+        </div>
+      </div>
+      <div className="px-4 pb-4 flex items-center gap-4">
+        <div className="w-14 h-14 border border-hairline-strong grid place-items-center bg-surface-inset relative shrink-0">
+          <Car className={`w-6 h-6 ${open ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.25} />
+          {open && (
+            <div
+              className="absolute inset-0 border border-odin-accent/60"
+              style={{ boxShadow: "0 0 14px hsl(var(--accent) / 0.3) inset" }}
+            />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[14px] font-medium capitalize">{garageCover.state}</div>
+          <div className="mono text-[10px] text-foreground-mute mt-0.5">Last change · {last}</div>
+        </div>
+        <TactileButton active={open} onClick={toggle} className="!px-5 !py-3">
+          {moving ? "…" : open ? "Close" : "Open"}
+        </TactileButton>
+      </div>
+    </Panel>
+  );
+};
+
+const AirPurifierQuickCard = () => {
+  const { airPurifier } = useDiscovery();
+  const { callService } = useHa();
+  if (!airPurifier) return null;
+  const a = airPurifier.attributes ?? {};
+  const off = airPurifier.state === "off";
+  const preset = (a.preset_mode as string | undefined)?.toLowerCase();
+  const mode: "off" | "on" | "auto" = off ? "off" : preset === "auto" ? "auto" : "on";
+
+  const setMode = (m: "off" | "on" | "auto") => {
+    if (m === "off") {
+      callService("fan", "turn_off", { entity_id: airPurifier.entity_id });
+    } else if (m === "auto") {
+      callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
+      callService("fan", "set_preset_mode", {
+        entity_id: airPurifier.entity_id,
+        preset_mode: "Auto",
+      });
+    } else {
+      callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
+    }
+  };
+
+  const seg = (m: "off" | "on" | "auto", label: string) => {
+    const active = mode === m;
+    return (
+      <button
+        key={m}
+        onClick={() => setMode(m)}
+        className={`flex-1 py-3 mono text-[11px] tracking-[0.18em] uppercase border transition-colors ${
+          active
+            ? "border-odin-accent/80 text-odin-accent bg-odin-accent/10"
+            : "border-hairline-strong text-foreground-mute hover:text-foreground"
+        }`}
+        style={active ? { boxShadow: "0 0 18px hsl(var(--accent) / 0.18) inset" } : undefined}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  return (
+    <Panel padding="p-0">
+      <div className="flex items-center justify-between p-4 pb-3">
+        <Label>Air · {friendly(airPurifier)}</Label>
+        <div className="flex items-center gap-2">
+          <Wind className={`w-3.5 h-3.5 ${mode !== "off" ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+          <span className={`mono text-[10px] uppercase ${mode !== "off" ? "text-odin-accent" : "text-foreground-mute"}`}>
+            {mode === "off" ? "Off" : mode === "auto" ? "Auto" : "On"}
+          </span>
+        </div>
+      </div>
+      <div className="px-4 pb-4 flex items-stretch gap-2">
+        {seg("off", "Off")}
+        {seg("on", "On")}
+        {seg("auto", "Auto")}
+      </div>
+    </Panel>
+  );
+};
+
+/* ——— Quick Controls section ——— */
+
 const QuickControls = () => {
-  const { rooms, garageCover, airPurifier, lights } = useDiscovery();
+  const { rooms, bedroomFan, garageCover, airPurifier } = useDiscovery();
   const { callService } = useHa();
 
-  const roomTile = (name: string, icon: any) => {
-    const r = rooms.find((x) => x.room === name);
+  const lightsTile = (room: string, label: string, icon: any) => {
+    const r = rooms.find((x) => x.room === room);
     if (!r || r.lights.length === 0) return null;
     const onLights = r.lights.filter(isOn);
     const active = onLights.length > 0;
@@ -1064,9 +1178,9 @@ const QuickControls = () => {
       : 0;
     return (
       <QuickTile
-        key={name}
+        key={room}
         icon={icon}
-        label={name}
+        label={label}
         status={active ? `${avgLevel}%` : "Off"}
         active={active}
         tone="amber"
@@ -1079,8 +1193,28 @@ const QuickControls = () => {
     );
   };
 
-  // Garage tile
-  const garage = garageCover
+  const fanTile = bedroomFan
+    ? (() => {
+        const on = bedroomFan.state === "on";
+        return (
+          <QuickTile
+            key="bedroom-fan"
+            icon={Fan}
+            label="Bedroom Fan"
+            status={on ? "On" : "Off"}
+            active={on}
+            tone="ok"
+            onClick={() =>
+              callService("fan", on ? "turn_off" : "turn_on", {
+                entity_id: bedroomFan.entity_id,
+              })
+            }
+          />
+        );
+      })()
+    : null;
+
+  const garageTile = garageCover
     ? (() => {
         const open = garageCover.state === "open" || garageCover.state === "opening";
         return (
@@ -1101,77 +1235,51 @@ const QuickControls = () => {
       })()
     : null;
 
-  // Purifier — cycles Off → On → Auto → Off
-  const purifier = airPurifier
+  const purifierTile = airPurifier
     ? (() => {
-        const a = airPurifier.attributes ?? {};
         const off = airPurifier.state === "off";
-        const preset = (a.preset_mode as string | undefined)?.toLowerCase();
-        const mode: "off" | "on" | "auto" = off ? "off" : preset === "auto" ? "auto" : "on";
-        const next = mode === "off" ? "on" : mode === "on" ? "auto" : "off";
+        const preset = (airPurifier.attributes?.preset_mode as string | undefined)?.toLowerCase();
+        const status = off ? "Off" : preset === "auto" ? "Auto" : "On";
         return (
           <QuickTile
             key="purifier"
             icon={Wind}
-            label="Purifier"
-            status={mode === "off" ? "Off" : mode === "auto" ? "Auto" : "On"}
-            active={mode !== "off"}
+            label="Air Purifier"
+            status={status}
+            active={!off}
             tone="ok"
-            onClick={() => {
-              if (next === "off") {
-                callService("fan", "turn_off", { entity_id: airPurifier.entity_id });
-              } else if (next === "auto") {
-                callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
-                callService("fan", "set_preset_mode", {
-                  entity_id: airPurifier.entity_id,
-                  preset_mode: "Auto",
-                });
-              } else {
-                callService("fan", "turn_on", { entity_id: airPurifier.entity_id });
-              }
-            }}
+            onClick={() =>
+              callService("fan", off ? "turn_on" : "turn_off", {
+                entity_id: airPurifier.entity_id,
+              })
+            }
           />
         );
       })()
     : null;
 
-  // All Off — kills every light
-  const anyLightOn = lights.some(isOn);
-  const allOff = (
-    <QuickTile
-      key="all-off"
-      icon={Power}
-      label="All Off"
-      status={anyLightOn ? "Lights on" : "Quiet"}
-      active={false}
-      tone="neutral"
-      disabled={!anyLightOn}
-      onClick={() =>
-        callService("light", "turn_off", {
-          entity_id: lights.filter(isOn).map((l) => l.entity_id),
-        })
-      }
-    />
-  );
-
+  // Order requested by user
   const tiles = [
-    roomTile("Living Room", Lightbulb),
-    roomTile("Kitchen", Lightbulb),
-    roomTile("Bedroom", Lightbulb),
-    roomTile("Office", Lightbulb),
-    roomTile("Second Floor Bathroom", Lightbulb),
-    purifier,
-    garage,
-    allOff,
+    fanTile,
+    garageTile,
+    purifierTile,
+    lightsTile("Kitchen", "Kitchen Lights", Lightbulb),
+    lightsTile("Living Room", "Living Room Lights", Lightbulb),
   ].filter(Boolean);
 
   if (tiles.length === 0) return null;
 
   return (
-    <div>
-      <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
-      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-        {tiles}
+    <div className="space-y-4">
+      <div>
+        <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+          {tiles}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GarageQuickCard />
+        <AirPurifierQuickCard />
       </div>
     </div>
   );
