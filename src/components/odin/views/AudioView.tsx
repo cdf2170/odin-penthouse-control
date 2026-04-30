@@ -68,7 +68,7 @@ export default function AudioView() {
           <div className="space-y-3">
             {speakers.map((sp, i) => (
               <div key={sp.name} className="grid grid-cols-[auto_1fr_auto_180px_36px] items-center gap-4 py-2.5 border-b border-hairline/60">
-                <Speaker className={`w-4 h-4 ${sp.playing ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                <SpeakerIcon className={`w-4 h-4 ${sp.playing ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
                 <div>
                   <div className="text-[13px]">{sp.name}</div>
                   <div className="mono text-[10px] text-foreground-mute mt-0.5">{sp.model.toUpperCase()} · {sp.group.toUpperCase()}</div>
