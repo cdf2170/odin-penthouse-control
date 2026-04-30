@@ -1296,11 +1296,26 @@ const QuickControls = () => {
       })()
     : null;
 
+  // Front Door — placeholder stub (wiring coming later)
+  const frontDoorTile = (
+    <QuickTile
+      key="front-door"
+      icon={Lock}
+      label="Front Door"
+      status="Not linked"
+      active={false}
+      tone="neutral"
+      disabled
+      onClick={() => {}}
+    />
+  );
+
   // Order requested by user
   const tiles = [
     fanTile,
     garageTile,
     purifierTile,
+    frontDoorTile,
     lightsTile("Kitchen", "Kitchen Lights", Lightbulb),
     lightsTile("Living Room", "Living Room Lights", Lightbulb),
   ].filter(Boolean);
