@@ -16,8 +16,10 @@ import SecurityView from "@/components/odin/views/SecurityView";
 import AudioView from "@/components/odin/views/AudioView";
 import CamerasView from "@/components/odin/views/CamerasView";
 import VoiceView from "@/components/odin/views/VoiceView";
+import DiagnosticsView from "@/components/odin/views/DiagnosticsView";
+import ConfigurationView from "@/components/odin/views/ConfigurationView";
 
-type ViewKey = "Overview" | "Lighting" | "Climate" | "Security" | "Audio" | "Cameras" | "Voice";
+type ViewKey = "Overview" | "Lighting" | "Climate" | "Security" | "Audio" | "Cameras" | "Voice" | "Diagnostics" | "Configuration";
 
 const navItems: { icon: any; label: ViewKey }[] = [
   { icon: Home, label: "Overview" },
