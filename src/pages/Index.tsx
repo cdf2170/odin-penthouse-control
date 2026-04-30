@@ -1326,7 +1326,7 @@ const OverviewView = () => {
         <QuickControls />
         {rooms.length > 0 && (
           <div>
-            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP DETAILS FOR FULL CONTROL`} />
+            <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP A ROOM TO CONTROL`} />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {rooms.map((r, i) => (
                 <RoomPanel
