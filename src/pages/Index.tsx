@@ -275,6 +275,13 @@ const RoomDetailsTray = ({
 
   const onLights = room.lights.filter(isOn);
   const anyOn = onLights.length > 0;
+  const totalBrightness = onLights.reduce(
+    (acc: number, l) => acc + ((l.attributes?.brightness as number) ?? 0),
+    0,
+  );
+  const avgLevel = onLights.length
+    ? Math.round((totalBrightness / onLights.length / 255) * 100)
+    : 0;
 
   const toggleAll = () =>
     callService("light", anyOn ? "turn_off" : "turn_on", {
@@ -311,10 +318,13 @@ const RoomDetailsTray = ({
         </div>
 
         <div className="flex-1 overflow-auto">
-          <div className="px-6 py-5 border-b border-hairline">
-            <div className="flex items-center justify-between mb-3">
-              <Label>All Fixtures</Label>
-              <span className="mono text-[10px] text-foreground-mute num">{onLights.length}/{room.lights.length} ON</span>
+          {/* Master controls */}
+          <div className="px-6 py-5 border-b border-hairline space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Room Master</Label>
+              <span className="mono text-[10px] text-foreground-mute num">
+                {onLights.length}/{room.lights.length} ON · {room.occupancy?.state === "on" ? "OCCUPIED" : "VACANT"}
+              </span>
             </div>
             <button
               onClick={toggleAll}
@@ -324,6 +334,26 @@ const RoomDetailsTray = ({
               <Power className="w-4 h-4" strokeWidth={1.5} />
               {anyOn ? "Turn All Off" : "Turn All On"}
             </button>
+            {room.lights.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="label">Master Brightness</span>
+                  <span className="mono text-[10px] text-odin-accent num">{avgLevel}%</span>
+                </div>
+                <Slider
+                  value={[avgLevel]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) =>
+                    callService("light", "turn_on", {
+                      entity_id: room.lights.map((l) => l.entity_id),
+                      brightness_pct: v[0],
+                    })
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {room.scenes.length > 0 && (
@@ -369,6 +399,68 @@ const RoomDetailsTray = ({
                         step={1}
                         onValueChange={(v) => setLevel(l.entity_id, v[0])}
                       />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(room.switches.length > 0 || room.fans.length > 0 || room.covers.length > 0) && (
+            <div className="px-6 py-5 border-b border-hairline">
+              <SectionHead
+                title="Other Devices"
+                meta={`${room.switches.length + room.fans.length + room.covers.length} ITEMS`}
+              />
+              <div className="space-y-2">
+                {room.switches.map((s) => {
+                  const on = s.state === "on";
+                  return (
+                    <div key={s.entity_id} className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          callService("switch", on ? "turn_off" : "turn_on", { entity_id: s.entity_id })
+                        }
+                        className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
+                      >
+                        <Power className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                      </button>
+                      <span className="text-[13px] flex-1 truncate">{friendly(s)}</span>
+                      <span className="mono text-[10px] text-foreground-mute uppercase">{s.state}</span>
+                    </div>
+                  );
+                })}
+                {room.fans.map((f) => {
+                  const on = f.state === "on";
+                  return (
+                    <div key={f.entity_id} className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          callService("fan", on ? "turn_off" : "turn_on", { entity_id: f.entity_id })
+                        }
+                        className={`btn-tactile w-9 h-7 grid place-items-center ${on ? "active" : ""}`}
+                      >
+                        <Wind className={`w-3 h-3 ${on ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                      </button>
+                      <span className="text-[13px] flex-1 truncate">{friendly(f)}</span>
+                      <span className="mono text-[10px] text-foreground-mute uppercase">{f.state}</span>
+                    </div>
+                  );
+                })}
+                {room.covers.map((c) => {
+                  const open = c.state === "open" || c.state === "opening";
+                  return (
+                    <div key={c.entity_id} className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          callService("cover", open ? "close_cover" : "open_cover", { entity_id: c.entity_id })
+                        }
+                        className={`btn-tactile w-9 h-7 grid place-items-center ${open ? "active" : ""}`}
+                      >
+                        <DoorClosed className={`w-3 h-3 ${open ? "text-odin-accent" : "text-foreground-mute"}`} strokeWidth={1.5} />
+                      </button>
+                      <span className="text-[13px] flex-1 truncate">{friendly(c)}</span>
+                      <span className="mono text-[10px] text-foreground-mute uppercase">{c.state}</span>
                     </div>
                   );
                 })}
@@ -1228,7 +1320,6 @@ const QuickControls = () => {
       />
     );
   };
-
 
 
   const garageTile = garageCover

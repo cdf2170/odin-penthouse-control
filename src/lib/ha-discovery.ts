@@ -41,6 +41,7 @@ export function useDiscovery() {
     const alarmPanels = byDomain(states, "alarm_control_panel");
     const assistSatellites = byDomain(states, "assist_satellite");
     const fans = byDomain(states, "fan");
+    const switches = byDomain(states, "switch");
 
     // Garage cover (look for "garage" or device_class=garage)
     const overrideGarage = haMap.garage.cover;
@@ -99,7 +100,6 @@ export function useDiscovery() {
       "Kitchen",
       "Second Floor Bathroom",
       "Office",
-      "Garage",
     ];
 
     const roomBundle = (room: string) => {
@@ -126,17 +126,29 @@ export function useDiscovery() {
               entity: sc.entity_id,
               state: sc,
             }));
-      const occupancy = override?.occupancy
-        ? states[override.occupancy]
-        : motionSensors.find((m) => matchRoom(m, room));
+      // Aggregate: any motion/occupancy/presence sensor in this room currently active
+      const roomMotion = motionSensors.filter((m) => matchRoom(m, room));
+      const overrideOcc = override?.occupancy ? states[override.occupancy] : undefined;
+      const occupancy =
+        overrideOcc ??
+        roomMotion.find((m) => m.state === "on") ??
+        roomMotion[0];
       const mediaPlayer = override?.media_player
         ? states[override.media_player]
         : mediaPlayers.find((m) => matchRoom(m, room));
-      return { room, lights: rLights, scenes: rScenes, occupancy, mediaPlayer };
+      // Other devices in the room — for drill-down "All Devices" section
+      const rSwitches = switches.filter((s) => matchRoom(s, room));
+      const rFans = fans.filter(
+        (f) => matchRoom(f, room) && f.entity_id !== airPurifier?.entity_id,
+      );
+      const rCovers = covers.filter(
+        (c) => matchRoom(c, room) && c.entity_id !== garageCover?.entity_id,
+      );
+      return { room, lights: rLights, scenes: rScenes, occupancy, mediaPlayer, switches: rSwitches, fans: rFans, covers: rCovers };
     };
 
     const rooms = ALLOWED_ROOMS.map(roomBundle).filter(
-      (r) => r.lights.length > 0 || r.scenes.length > 0,
+      (r) => r.lights.length > 0 || r.scenes.length > 0 || (r as any).switches.length > 0,
     );
 
     // Climate zones: use override zones if any are present in states; else discover all climate.*
