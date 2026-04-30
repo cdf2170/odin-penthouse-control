@@ -13,14 +13,34 @@ export const isOn = (s?: HaState) =>
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
+// Aliases — additional fragments that should also match a canonical room name
+const ROOM_ALIASES: Record<string, string[]> = {
+  "Second Floor Bathroom": [
+    "secondfloorbathroom",
+    "secondfloorbath",
+    "2ndfloorbathroom",
+    "2ndfloorbath",
+    "upstairsbathroom",
+    "upstairsbath",
+    "bathroom2",
+    "bath2",
+    "bathroomupstairs",
+  ],
+  "Living Room": ["livingroom", "living", "lounge", "familyroom"],
+  "Bedroom": ["bedroom", "masterbedroom", "primarybedroom"],
+  "Kitchen": ["kitchen"],
+  "Office": ["office", "study"],
+};
+
 // Match an entity to a room by checking entity_id, friendly_name, and area_id
 const matchRoom = (s: HaState, room: string) => {
-  const r = norm(room);
-  return (
-    norm(s.entity_id).includes(r) ||
-    norm(s.attributes?.friendly_name ?? "").includes(r) ||
-    norm(s.attributes?.area_id ?? "").includes(r)
-  );
+  const candidates = [norm(room), ...(ROOM_ALIASES[room] ?? []).map(norm)];
+  const haystacks = [
+    norm(s.entity_id),
+    norm(s.attributes?.friendly_name ?? ""),
+    norm(s.attributes?.area_id ?? ""),
+  ];
+  return candidates.some((c) => haystacks.some((h) => h.includes(c)));
 };
 
 const byDomain = (states: Record<string, HaState>, domain: string) =>
