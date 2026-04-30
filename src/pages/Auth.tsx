@@ -32,7 +32,6 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: { display_name: displayName || email.split("@")[0] },
