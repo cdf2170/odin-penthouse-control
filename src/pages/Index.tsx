@@ -1823,7 +1823,7 @@ const OverviewView = () => {
       <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
 
       <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
-        <Climate /><NowPlaying /><Voice />
+        <Climate /><NowPlaying /><Calendar />
         <ActivityLog />
       </aside>
     </div>
