@@ -2,104 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* ODIN — luxury residential control */
+    --background: 240 6% 5%;
+    --surface: 240 6% 7%;
+    --surface-raised: 230 8% 9%;
+    --surface-inset: 240 8% 4%;
+    --foreground: 30 10% 92%;
+    --foreground-dim: 30 6% 62%;
+    --foreground-mute: 230 5% 38%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --hairline: 230 8% 14%;
+    --hairline-strong: 230 8% 20%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --accent: 32 88% 58%;          /* amber — active */
+    --accent-glow: 32 100% 64%;
+    --accent-dim: 32 40% 28%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --idle: 230 5% 32%;
+    --alert: 358 70% 56%;
+    --ok: 152 40% 48%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface-raised);
+    --popover-foreground: var(--foreground);
+    --primary: var(--accent);
+    --primary-foreground: 240 10% 6%;
+    --secondary: 230 8% 12%;
+    --secondary-foreground: var(--foreground);
+    --muted: 230 8% 11%;
+    --muted-foreground: var(--foreground-dim);
+    --border: var(--hairline);
+    --input: var(--hairline-strong);
+    --ring: var(--accent);
+    --destructive: var(--alert);
+    --destructive-foreground: 0 0% 98%;
+    --radius: 2px;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --grad-panel: linear-gradient(180deg, hsl(230 8% 8%) 0%, hsl(240 8% 6%) 100%);
+    --grad-accent: linear-gradient(180deg, hsl(32 88% 58%) 0%, hsl(28 84% 48%) 100%);
+    --shadow-panel: 0 1px 0 hsl(230 10% 14% / 0.6) inset, 0 0 0 1px hsl(230 8% 12%);
+    --shadow-glow-amber: 0 0 24px hsl(32 88% 58% / 0.18);
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  * { @apply border-border; }
+  html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11", "tnum";
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 20% -10%, hsl(230 20% 10% / 0.6), transparent 60%),
+      radial-gradient(900px 500px at 110% 110%, hsl(220 30% 8% / 0.5), transparent 60%);
+  }
+}
+
+@layer components {
+  .panel {
+    background: var(--grad-panel);
+    border: 1px solid hsl(var(--hairline));
+    position: relative;
+  }
+  .panel::before {
+    content: "";
+    position: absolute; inset: 0 auto 0 0; width: 1px;
+    background: linear-gradient(180deg, transparent, hsl(var(--accent) / 0.0) 50%, transparent);
+    pointer-events: none;
+  }
+  .panel-accent::before {
+    background: linear-gradient(180deg, transparent 10%, hsl(var(--accent) / 0.5) 50%, transparent 90%);
+  }
+  .hairline { border-color: hsl(var(--hairline)); }
+  .label {
+    @apply uppercase text-[10px] tracking-[0.18em] text-foreground-mute font-medium;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .num { font-variant-numeric: tabular-nums; }
+  .dot {
+    @apply inline-block w-1.5 h-1.5;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .scanline {
+    background-image: repeating-linear-gradient(
+      0deg, hsl(var(--foreground) / 0.02) 0 1px, transparent 1px 3px
+    );
+  }
+  .btn-tactile {
+    @apply transition-all duration-200 active:scale-[0.98];
+    background: linear-gradient(180deg, hsl(230 8% 11%), hsl(230 8% 8%));
+    border: 1px solid hsl(var(--hairline-strong));
+  }
+  .btn-tactile:hover { border-color: hsl(var(--accent) / 0.5); }
+  .btn-tactile.active {
+    background: linear-gradient(180deg, hsl(32 88% 18%), hsl(30 84% 12%));
+    border-color: hsl(var(--accent) / 0.7);
+    box-shadow: var(--shadow-glow-amber), inset 0 1px 0 hsl(var(--accent) / 0.2);
+    color: hsl(var(--accent-glow));
   }
 }
