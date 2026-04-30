@@ -535,7 +535,7 @@ const OverviewView = () => {
         <GlobalScenes />
         <div>
           <SectionHead title="Rooms" meta="03 ZONES · GROUND FLOOR · TAP TO ADJUST" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {roomDefs.map(r => (
               <RoomPanel
                 key={r.name}
