@@ -2,7 +2,8 @@
 import { useMemo, useState } from "react";
 import {
   Heart, Moon, Flame, Footprints, Activity, Droplet, Wind,
-  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain, ChevronRight, X
+  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain, ChevronRight, X,
+  Battery, Apple, Beef, Wheat, Nut, User
 } from "lucide-react";
 import { Panel, Label, StatusDot, SectionHead, Hairline, TactileButton } from "@/components/odin/primitives";
 
