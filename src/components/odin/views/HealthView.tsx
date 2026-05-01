@@ -988,28 +988,6 @@ const HealthView = () => {
         </Panel>
       </div>
 
-      {/* ───────────────── DEVICE STATUS ───────────────── */}
-      <Panel padding="p-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 grid place-items-center border border-hairline-strong">
-            <Watch className="w-4 h-4 text-odin-accent" strokeWidth={1.5} />
-          </div>
-          <div className="flex-1">
-            <div className="text-[13px]">{health.device.name}</div>
-            <div className="text-[10px] text-foreground-mute mono uppercase tracking-[0.14em] mt-0.5">
-              Last sync · {health.device.lastSync}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="label">Battery</div>
-            <div className="mono num text-[16px] mt-1">{health.device.battery}%</div>
-          </div>
-          <div className="w-24">
-            <ProgressBar value={health.device.battery} max={100} color="hsl(var(--ok))" />
-          </div>
-        </div>
-      </Panel>
-    </div>
   );
 };
 
