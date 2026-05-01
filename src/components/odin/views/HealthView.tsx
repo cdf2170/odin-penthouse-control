@@ -1,10 +1,10 @@
 // ODIN Health — Garmin-ready biometrics dashboard (mock data scaffold)
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Heart, Moon, Flame, Footprints, Activity, Droplet, Wind,
-  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain
+  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain, ChevronRight, X
 } from "lucide-react";
-import { Panel, Label, StatusDot, SectionHead, Hairline } from "@/components/odin/primitives";
+import { Panel, Label, StatusDot, SectionHead, Hairline, TactileButton } from "@/components/odin/primitives";
 
 /* ------------------------------------------------------------------ */
 /* MOCK DATA — shaped to mirror Garmin Connect API responses.          */
