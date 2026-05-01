@@ -22,6 +22,22 @@ const health = {
     wake: "07:00",
     restingHr: 52,
     hrv: 68,
+    // Last 7 nights (oldest → newest)
+    week: [
+      { day: "Fri", score: 72, hours: 6.4 },
+      { day: "Sat", score: 68, hours: 5.9 },
+      { day: "Sun", score: 81, hours: 7.2 },
+      { day: "Mon", score: 79, hours: 7.0 },
+      { day: "Tue", score: 88, hours: 8.1 },
+      { day: "Wed", score: 84, hours: 7.6 },
+      { day: "Thu", score: 86, hours: 7.7 },
+    ],
+    // Last 30 nights (oldest → newest)
+    month: [
+      74, 71, 80, 77, 69, 65, 78, 82, 75, 73,
+      80, 84, 79, 72, 68, 76, 81, 85, 83, 77,
+      72, 68, 81, 79, 88, 84, 86, 82, 85, 86,
+    ],
   },
   heart: {
     current: 64,
