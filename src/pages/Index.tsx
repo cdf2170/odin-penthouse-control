@@ -1145,7 +1145,13 @@ const Security = () => {
               s.attributes?.device_class === "motion" || s.attributes?.device_class === "occupancy";
             const rawName = friendly(s);
             const isGarage = /garage/i.test(rawName);
-            const name = isGarage ? rawName.replace(/\s*motion\s*/i, "").trim() || "Garage" : rawName;
+            const cleaned = rawName
+              .replace(/\bsensors?\b/gi, "")
+              .replace(/\s{2,}/g, " ")
+              .trim();
+            const name = isGarage
+              ? cleaned.replace(/\s*motion\s*/i, "").trim() || "Garage"
+              : cleaned || rawName;
             const Icon = isMotion ? Activity : DoorClosed;
             const label = isMotion
               ? open
