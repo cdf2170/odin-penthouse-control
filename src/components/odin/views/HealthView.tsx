@@ -578,6 +578,85 @@ const HealthView = () => {
         </Panel>
       )}
 
+      {/* ───────────────── BODY BATTERY DRILL-DOWN ───────────────── */}
+      {bbOpen && (
+        <Panel className="relative animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Battery className="w-4 h-4 text-odin-accent" strokeWidth={1.5} />
+              <div>
+                <div className="text-[15px] font-medium tracking-[0.02em]">Body Battery Trends</div>
+                <div className="label mt-1">
+                  {bbRange === "week" ? "Last 7 days · daily range" : "Last 30 days · end-of-day"} · Avg {bbRange === "week" ? bbWeekAvg : bbMonthAvg}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <TactileButton active={bbRange === "week"} onClick={() => setBbRange("week")}>Week</TactileButton>
+              <TactileButton active={bbRange === "month"} onClick={() => setBbRange("month")}>Month</TactileButton>
+              <button onClick={() => setBbOpen(false)} className="ml-2 w-7 h-7 grid place-items-center border border-hairline-strong text-foreground-mute hover:text-foreground hover:border-odin-accent/50 transition-colors" aria-label="Close">
+                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+          {bbRange === "week" ? (
+            <BodyBatteryWeekChart data={health.bodyBatteryTrend.week} avg={bbWeekAvg} />
+          ) : (
+            <GenericLineChart data={health.bodyBatteryTrend.month} avg={bbMonthAvg} domain={[40, 100]} color="hsl(152 50% 50%)" />
+          )}
+          <Hairline className="my-5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div><Label>Avg End</Label><div className="mono text-[24px] num mt-1.5 leading-none">{bbRange === "week" ? bbWeekAvg : bbMonthAvg}</div></div>
+            <div><Label>Best Charge</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none">{bbRange === "week" ? Math.max(...health.bodyBatteryTrend.week.map(d => d.high)) : Math.max(...health.bodyBatteryTrend.month)}</div></div>
+            <div><Label>Lowest</Label><div className="mono text-[24px] num text-odin-alert mt-1.5 leading-none">{bbRange === "week" ? Math.min(...health.bodyBatteryTrend.week.map(d => d.low)) : Math.min(...health.bodyBatteryTrend.month)}</div></div>
+            <div><Label>Trend</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none flex items-center gap-2">+8<TrendingUp className="w-4 h-4" strokeWidth={1.5} /></div></div>
+          </div>
+        </Panel>
+      )}
+
+      {/* ───────────────── HEART RATE DRILL-DOWN ───────────────── */}
+      {hrOpen && (
+        <Panel className="relative animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Heart className="w-4 h-4 text-odin-alert" strokeWidth={1.5} fill="currentColor" />
+              <div>
+                <div className="text-[15px] font-medium tracking-[0.02em]">Heart Rate Trends</div>
+                <div className="label mt-1">
+                  {hrRange === "week" ? `Last 7 days · resting/avg/max · Avg rest ${hrWeekRestAvg}` : `Last 30 days · resting bpm · Avg ${hrMonthAvg}`}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <TactileButton active={hrRange === "week"} onClick={() => setHrRange("week")}>Week</TactileButton>
+              <TactileButton active={hrRange === "month"} onClick={() => setHrRange("month")}>Month</TactileButton>
+              <button onClick={() => setHrOpen(false)} className="ml-2 w-7 h-7 grid place-items-center border border-hairline-strong text-foreground-mute hover:text-foreground hover:border-odin-accent/50 transition-colors" aria-label="Close">
+                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+          {hrRange === "week" ? (
+            <>
+              <HeartWeekChart data={health.heartTrend.week} />
+              <div className="flex items-center gap-5 mt-4 text-[10px] uppercase tracking-[0.14em] text-foreground-mute">
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2" style={{ background: "hsl(220 70% 60%)" }} />Resting</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2" style={{ background: "hsl(48 80% 55%)" }} />Avg</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2" style={{ background: "hsl(var(--alert))" }} />Max</div>
+              </div>
+            </>
+          ) : (
+            <GenericLineChart data={health.heartTrend.month} avg={hrMonthAvg} domain={[45, 65]} color="hsl(var(--alert))" />
+          )}
+          <Hairline className="my-5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div><Label>Resting Avg</Label><div className="mono text-[24px] num mt-1.5 leading-none">{hrRange === "week" ? hrWeekRestAvg : hrMonthAvg}</div></div>
+            <div><Label>Lowest Rest</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none">{hrRange === "week" ? Math.min(...health.heartTrend.week.map(d => d.resting)) : Math.min(...health.heartTrend.month)}</div></div>
+            <div><Label>Peak</Label><div className="mono text-[24px] num text-odin-alert mt-1.5 leading-none">{Math.max(...health.heartTrend.week.map(d => d.max))}</div></div>
+            <div><Label>HRV Trend</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none flex items-center gap-2">+4<TrendingUp className="w-4 h-4" strokeWidth={1.5} /></div></div>
+          </div>
+        </Panel>
+      )}
+
       {/* ───────────────── ACTIVITY RINGS ───────────────── */}
       <Panel>
         <SectionHead title="Today's Activity" meta={`SYNCED ${health.device.lastSync.toUpperCase()}`} />
