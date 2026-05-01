@@ -353,6 +353,10 @@ const HeartWeekChart = ({ data }: { data: { day: string; resting: number; avg: n
 const HealthView = () => {
   const [sleepOpen, setSleepOpen] = useState(false);
   const [sleepRange, setSleepRange] = useState<"week" | "month">("week");
+  const [bbOpen, setBbOpen] = useState(false);
+  const [bbRange, setBbRange] = useState<"week" | "month">("week");
+  const [hrOpen, setHrOpen] = useState(false);
+  const [hrRange, setHrRange] = useState<"week" | "month">("week");
 
   const totalSleep = useMemo(() => {
     const s = health.sleep.stages;
@@ -363,6 +367,18 @@ const HealthView = () => {
 
   const weekAvg = Math.round(health.sleep.week.reduce((a, b) => a + b.score, 0) / health.sleep.week.length);
   const monthAvg = Math.round(health.sleep.month.reduce((a, b) => a + b, 0) / health.sleep.month.length);
+
+  const bbWeekAvg = Math.round(health.bodyBatteryTrend.week.reduce((a, b) => a + b.end, 0) / 7);
+  const bbMonthAvg = Math.round(health.bodyBatteryTrend.month.reduce((a, b) => a + b, 0) / health.bodyBatteryTrend.month.length);
+  const hrMonthAvg = Math.round(health.heartTrend.month.reduce((a, b) => a + b, 0) / health.heartTrend.month.length);
+  const hrWeekRestAvg = Math.round(health.heartTrend.week.reduce((a, b) => a + b.resting, 0) / 7);
+
+  // Macros
+  const n = health.nutrition;
+  const macroPct = (cur: number, goal: number) => Math.min((cur / goal) * 100, 100);
+  // Macro calorie split (4/4/9)
+  const macroKcal = { p: n.today.protein * 4, c: n.today.carbs * 4, f: n.today.fat * 9 };
+  const macroKcalTotal = macroKcal.p + macroKcal.c + macroKcal.f || 1;
 
   return (
     <div className="space-y-6 max-w-[1400px]">
