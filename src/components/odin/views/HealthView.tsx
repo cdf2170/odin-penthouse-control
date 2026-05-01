@@ -260,6 +260,7 @@ const HealthView = () => {
               <div><span className="inline-block w-1.5 h-1.5 mr-1" style={{ background: "hsl(var(--foreground-mute))" }} />Awake {health.sleep.stages.awake}m</div>
             </div>
           </div>
+          </button>
         </Panel>
 
         {/* Heart rate live */}
