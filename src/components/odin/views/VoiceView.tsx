@@ -57,7 +57,7 @@ export default function VoiceView() {
             const active = status === "active";
             const lastChanged = s.state.last_changed
               ? new Date(s.state.last_changed).toLocaleTimeString("en-US", {
-                  hour12: false,
+                  hour12: true,
                 })
               : "—";
             return (
