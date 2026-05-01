@@ -1,185 +1,262 @@
 import { useMemo } from "react";
-import { Lock, Unlock, Shield, DoorClosed, Activity } from "lucide-react";
-import { Panel, Label, SectionHead, TactileButton, StatusDot } from "../primitives";
+import { DoorClosed, Activity, Car, Clock } from "lucide-react";
+import { Panel, Label, SectionHead, StatusDot, TactileButton } from "../primitives";
 import { useHa } from "@/lib/ha-client";
-import { useDiscovery } from "@/lib/ha-discovery";
-import { friendly } from "@/lib/ha-discovery";
+import { useDiscovery, friendly } from "@/lib/ha-discovery";
+import type { HaState } from "@/lib/ha-client";
 
-const ARM_TO_SERVICE: Record<string, { service: string; label: string }> = {
-  Disarmed: { service: "alarm_disarm", label: "disarmed" },
-  Stay: { service: "alarm_arm_home", label: "armed_home" },
-  Night: { service: "alarm_arm_night", label: "armed_night" },
-  Away: { service: "alarm_arm_away", label: "armed_away" },
-};
-const STATE_TO_LABEL: Record<string, string> = {
-  disarmed: "Disarmed",
-  armed_home: "Stay",
-  armed_night: "Night",
-  armed_away: "Away",
-  pending: "Pending",
-  triggered: "TRIGGERED",
-  arming: "Arming",
-  disarming: "Disarming",
+/* ---------- Room → entity bindings (only live rooms) -------------- */
+type RoomBinding = {
+  name: string;
+  door?: string;       // contact / opening sensor
+  presence?: string;   // FP2 / Aqara / mmWave presence
+  status: "live" | "future";
 };
 
-export default function SecurityView() {
+const ROOMS: RoomBinding[] = [
+  {
+    name: "Office",
+    door: "binary_sensor.office_door_sensor",
+    presence: "binary_sensor.office_presence_sensor_presence_sensor_1",
+    status: "live",
+  },
+  {
+    name: "Bedroom",
+    door: "binary_sensor.bedroom_door_sensor",
+    presence: "binary_sensor.presence_sensor_bedroom_presence_sensor_1",
+    status: "live",
+  },
+  {
+    name: "Living Room",
+    presence: "binary_sensor.presence_sensor_fp2_6426_presence_sensor_1",
+    status: "live",
+  },
+  { name: "Bathroom", status: "future" },
+  { name: "Kitchen", status: "future" },
+];
+
+/* ---------- Room card --------------------------------------------- */
+const RoomCard = ({
+  binding,
+  door,
+  presence,
+}: {
+  binding: RoomBinding;
+  door?: HaState;
+  presence?: HaState;
+}) => {
+  if (binding.status === "future") {
+    return (
+      <Panel>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[15px] font-medium tracking-[0.04em]">
+              {binding.name}
+            </div>
+            <div className="mono text-[10px] uppercase tracking-[0.18em] text-foreground-mute mt-1.5">
+              Future
+            </div>
+          </div>
+          <StatusDot state="idle" />
+        </div>
+        <div className="text-[12px] text-foreground-mute mt-4">
+          Sensors not yet installed.
+        </div>
+      </Panel>
+    );
+  }
+
+  const doorOpen = door?.state === "on";
+  const occupied = presence?.state === "on";
+  const anyAlert = doorOpen;
+
+  return (
+    <Panel>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-[15px] font-medium tracking-[0.04em]">
+            {binding.name}
+          </div>
+          <div className="mono text-[10px] uppercase tracking-[0.18em] text-foreground-mute mt-1.5 num">
+            {occupied ? "Occupied" : "Vacant"}
+            {door ? ` · ${doorOpen ? "Door Open" : "Door Closed"}` : ""}
+          </div>
+        </div>
+        <StatusDot state={anyAlert ? "alert" : occupied ? "active" : "ok"} />
+      </div>
+
+      <div className="mt-5 space-y-2.5">
+        {door && (
+          <Row
+            icon={DoorClosed}
+            label={friendly(door)}
+            on={doorOpen}
+            onText="OPEN"
+            offText="CLOSED"
+            tone={doorOpen ? "alert" : "ok"}
+          />
+        )}
+        {presence && (
+          <Row
+            icon={Activity}
+            label={friendly(presence)}
+            on={occupied}
+            onText="ACTIVE"
+            offText="CLEAR"
+            tone={occupied ? "active" : "idle"}
+          />
+        )}
+      </div>
+    </Panel>
+  );
+};
+
+const Row = ({
+  icon: Icon,
+  label,
+  on,
+  onText,
+  offText,
+  tone,
+}: {
+  icon: any;
+  label: string;
+  on: boolean;
+  onText: string;
+  offText: string;
+  tone: "alert" | "ok" | "active" | "idle";
+}) => (
+  <div className="flex items-center gap-3 py-1.5">
+    <Icon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
+    <span className="text-[12px] flex-1 truncate text-foreground-dim">
+      {label}
+    </span>
+    <StatusDot state={tone} />
+    <span className="mono text-[10px] text-foreground-dim w-16 text-right">
+      {on ? onText : offText}
+    </span>
+  </div>
+);
+
+/* ---------- Garage card (open/close only) ------------------------- */
+const GarageCard = ({ cover }: { cover?: HaState }) => {
   const { callService } = useHa();
-  const { alarm, doorSensors, motionSensors } = useDiscovery();
+  if (!cover) {
+    return (
+      <Panel>
+        <Label>Garage</Label>
+        <div className="text-[12px] text-foreground-mute mt-2">
+          No garage cover discovered.
+        </div>
+      </Panel>
+    );
+  }
+  const open = cover.state === "open" || cover.state === "opening";
+  const moving = cover.state === "opening" || cover.state === "closing";
 
-  const armLabel = alarm ? STATE_TO_LABEL[alarm.state] ?? alarm.state : "—";
-  const triggered = alarm?.state === "triggered";
-
-  // Only the dedicated mmWave/FP2/Aqara presence sensors — not the hallway PIR
-  // or the front-door AI person/pet/vehicle/visitor classifiers.
-  const presenceSensors = useMemo(
-    () =>
-      motionSensors.filter((s) =>
-        /presence_sensor/i.test(s.entity_id),
-      ),
-    [motionSensors],
-  );
-
-  const groups = useMemo(
-    () => [
-      { zone: "Doors & Openings", items: doorSensors },
-      { zone: "Presence", items: presenceSensors },
-    ],
-    [doorSensors, presenceSensors],
-  );
-
-  const setArm = (m: keyof typeof ARM_TO_SERVICE) => {
-    if (!alarm) return;
-    callService("alarm_control_panel", ARM_TO_SERVICE[m].service, {
-      entity_id: alarm.entity_id,
+  const toggle = () =>
+    callService("cover", open ? "close_cover" : "open_cover", {
+      entity_id: cover.entity_id,
     });
-  };
+
+  return (
+    <Panel>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-[15px] font-medium tracking-[0.04em]">
+            Garage
+          </div>
+          <div className="mono text-[10px] uppercase tracking-[0.18em] text-foreground-mute mt-1.5 num">
+            {cover.state}
+          </div>
+        </div>
+        <StatusDot state={open ? "alert" : "ok"} />
+      </div>
+
+      <div className="flex items-center gap-3 mt-5">
+        <Car className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
+        <span className="text-[12px] flex-1 capitalize text-foreground-dim">
+          {open ? "Door is open" : "Door is closed"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mt-5">
+        <TactileButton
+          active={!open}
+          onClick={() => !moving && open && toggle()}
+          className={`!py-2.5 ${moving || !open ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          Close
+        </TactileButton>
+        <TactileButton
+          active={open}
+          onClick={() => !moving && !open && toggle()}
+          className={`!py-2.5 ${moving || open ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          Open
+        </TactileButton>
+      </div>
+    </Panel>
+  );
+};
+
+/* ---------- View -------------------------------------------------- */
+export default function SecurityView() {
+  const { states } = useHa();
+  const { garageCover } = useDiscovery();
+
+  const cards = useMemo(
+    () =>
+      ROOMS.map((b) => ({
+        binding: b,
+        door: b.door ? states[b.door] : undefined,
+        presence: b.presence ? states[b.presence] : undefined,
+      })),
+    [states],
+  );
+
+  const liveCount = cards.filter((c) => c.binding.status === "live").length;
+  const occupiedCount = cards.filter(
+    (c) => c.presence?.state === "on",
+  ).length;
+  const openDoors = cards.filter((c) => c.door?.state === "on").length;
 
   return (
     <div className="space-y-6">
       <Panel accent>
-        <div className="flex items-start justify-between mb-5">
+        <div className="flex items-start justify-between">
           <div>
-            <Label>Security</Label>
-            <div className="text-[20px] font-medium mt-2 tracking-[0.04em] flex items-center gap-3">
-              {armLabel === "Disarmed" || armLabel === "—" ? (
-                <Unlock className="w-5 h-5 text-foreground-dim" strokeWidth={1.5} />
-              ) : (
-                <Lock
-                  className={`w-5 h-5 ${triggered ? "text-odin-alert" : "text-odin-ok"}`}
-                  strokeWidth={1.5}
-                />
-              )}
-              System {armLabel}
+            <Label>Security · Presence</Label>
+            <div className="text-[20px] font-medium mt-2 tracking-[0.04em]">
+              {occupiedCount} occupied · {openDoors} door{openDoors === 1 ? "" : "s"} open
             </div>
             <div className="text-[12px] text-foreground-dim mt-1">
-              {doorSensors.length + presenceSensors.length} sensors monitored · live
+              {liveCount} live room{liveCount === 1 ? "" : "s"} · live via Home Assistant
             </div>
           </div>
-          <Shield className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
+          <Clock className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
         </div>
-        {alarm ? (
-          <div className="flex gap-1.5">
-            {(["Disarmed", "Stay", "Night", "Away"] as const).map((m) => (
-              <TactileButton
-                key={m}
-                active={armLabel === m}
-                onClick={() => setArm(m)}
-                className="!px-5 !py-2.5"
-              >
-                {m}
-              </TactileButton>
-            ))}
-          </div>
-        ) : (
-          <div className="text-[12px] text-foreground-mute">
-            No alarm panel detected. Add `alarm_control_panel.*` in HA or set in mapping.
-          </div>
-        )}
       </Panel>
 
-      <div className="grid grid-cols-[1fr_320px] gap-6">
-        <div className="space-y-6">
-          {groups.map((group) => (
-            <Panel key={group.zone}>
-              <SectionHead
-                title={group.zone}
-                meta={`${group.items.length} SENSORS`}
-              />
-              {group.items.length === 0 ? (
-                <div className="text-[12px] text-foreground-mute py-3">
-                  None discovered.
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-x-6">
-                  {group.items.map((s) => {
-                    const open = s.state === "on";
-                    const isMotion =
-                      s.attributes?.device_class === "motion" ||
-                      s.attributes?.device_class === "occupancy";
-                    const Icon = isMotion ? Activity : DoorClosed;
-                    return (
-                      <div
-                        key={s.entity_id}
-                        className="flex items-center gap-3 py-2.5 border-b border-hairline/60"
-                      >
-                        <Icon
-                          className="w-3.5 h-3.5 text-foreground-mute"
-                          strokeWidth={1.5}
-                        />
-                        <span className="text-[13px] flex-1 truncate">
-                          {friendly(s)}
-                        </span>
-                        <StatusDot
-                          state={open ? (isMotion ? "active" : "alert") : "ok"}
-                        />
-                        <span className="mono text-[10px] text-foreground-dim w-16 text-right">
-                          {isMotion
-                            ? open
-                              ? "ACTIVE"
-                              : "CLEAR"
-                            : open
-                              ? "OPEN"
-                              : "CLOSED"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Panel>
+      <div>
+        <SectionHead title="Rooms" meta={`${ROOMS.length} TOTAL`} />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {cards.map((c) => (
+            <RoomCard
+              key={c.binding.name}
+              binding={c.binding}
+              door={c.door}
+              presence={c.presence}
+            />
           ))}
         </div>
+      </div>
 
-        <Panel>
-          <SectionHead title="Recent Changes" meta="DERIVED FROM SENSORS" />
-          <ul className="space-y-3">
-            {[...doorSensors, ...presenceSensors]
-              .filter((s) => s.last_changed)
-              .sort(
-                (a, b) =>
-                  new Date(b.last_changed!).getTime() -
-                  new Date(a.last_changed!).getTime(),
-              )
-              .slice(0, 8)
-              .map((s) => (
-                <li key={s.entity_id} className="border-b border-hairline/60 pb-3">
-                  <div className="flex items-baseline justify-between mb-1">
-                    <span className="mono text-[11px] text-foreground-mute num">
-                      {new Date(s.last_changed!).toLocaleTimeString("en-US", {
-                        hour12: true,
-                      })}
-                    </span>
-                    <span className="mono text-[10px] text-foreground-mute uppercase">
-                      {s.state}
-                    </span>
-                  </div>
-                  <div className="text-[12px] text-foreground-dim truncate">
-                    {friendly(s)}
-                  </div>
-                </li>
-              ))}
-          </ul>
-        </Panel>
+      <div>
+        <SectionHead title="Garage" meta="OPEN / CLOSE" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <GarageCard cover={garageCover} />
+        </div>
       </div>
     </div>
   );
