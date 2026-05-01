@@ -763,6 +763,196 @@ const HealthView = () => {
         </Panel>
       </div>
 
+      {/* ───────────────── NUTRITION ───────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Calorie ring + body profile */}
+        <Panel accent className="lg:col-span-1 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-30 pointer-events-none scanline" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-6">
+              <Label>Nutrition · Today</Label>
+              <div className="flex items-center gap-1.5">
+                <Apple className="w-3.5 h-3.5 text-odin-accent" strokeWidth={1.5} />
+                <span className="mono text-[10px] text-foreground-mute">KCAL</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="relative grid place-items-center">
+                <Ring value={n.today.calories} max={n.goals.calories} size={148} stroke={4} color="hsl(14 84% 58%)" />
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="text-center">
+                    <div className="mono text-[34px] num leading-none text-odin-glow">{n.today.calories.toLocaleString()}</div>
+                    <div className="label mt-1.5">of {n.goals.calories.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <Label>Remaining</Label>
+                  <div className="mono text-[18px] num text-odin-ok mt-1">{(n.goals.calories - n.today.calories).toLocaleString()}</div>
+                </div>
+                <div>
+                  <Label>Burned</Label>
+                  <div className="mono text-[18px] num mt-1">{health.activity.calories.toLocaleString()}</div>
+                </div>
+                <div>
+                  <Label>Net Balance</Label>
+                  <div className={`mono text-[14px] num mt-1 ${n.today.calories - health.activity.calories < 0 ? "text-odin-ok" : ""}`}>
+                    {n.today.calories - health.activity.calories > 0 ? "+" : ""}{n.today.calories - health.activity.calories} kcal
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Hairline className="my-4" />
+            <div className="flex items-center gap-2 text-[10px] text-foreground-mute mono uppercase tracking-[0.14em]">
+              <User className="w-3 h-3" strokeWidth={1.5} />
+              {health.profile.sex} · {health.profile.age}y · {health.profile.height}cm · {health.profile.weight}kg · {health.profile.bodyFat}% BF · {health.profile.goal}
+            </div>
+          </div>
+        </Panel>
+
+        {/* Macros */}
+        <Panel className="lg:col-span-2">
+          <SectionHead title="Macros" meta={`GOAL · ${health.profile.goal.toUpperCase()}`} />
+          {/* Stacked macro split bar */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2 text-[10px] text-foreground-mute mono uppercase tracking-[0.14em]">
+              <span>Calorie split</span>
+              <span>P {Math.round(macroKcal.p / macroKcalTotal * 100)}% · C {Math.round(macroKcal.c / macroKcalTotal * 100)}% · F {Math.round(macroKcal.f / macroKcalTotal * 100)}%</span>
+            </div>
+            <div className="flex h-2.5 w-full overflow-hidden">
+              <div style={{ width: `${(macroKcal.p / macroKcalTotal) * 100}%`, background: "hsl(14 84% 58%)", boxShadow: "0 0 8px hsl(14 84% 58% / 0.5)" }} />
+              <div style={{ width: `${(macroKcal.c / macroKcalTotal) * 100}%`, background: "hsl(48 80% 55%)", boxShadow: "0 0 8px hsl(48 80% 55% / 0.5)" }} />
+              <div style={{ width: `${(macroKcal.f / macroKcalTotal) * 100}%`, background: "hsl(280 60% 60%)", boxShadow: "0 0 8px hsl(280 60% 60% / 0.5)" }} />
+            </div>
+          </div>
+
+          {/* Per-macro progress */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { key: "Protein", icon: Beef, cur: n.today.protein, goal: n.goals.protein, color: "hsl(14 84% 58%)", unit: "g" },
+              { key: "Carbs",   icon: Wheat, cur: n.today.carbs,   goal: n.goals.carbs,   color: "hsl(48 80% 55%)", unit: "g" },
+              { key: "Fat",     icon: Nut,   cur: n.today.fat,     goal: n.goals.fat,     color: "hsl(280 60% 60%)", unit: "g" },
+            ].map((m) => (
+              <div key={m.key}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <m.icon className="w-3.5 h-3.5" strokeWidth={1.5} style={{ color: m.color }} />
+                    <Label>{m.key}</Label>
+                  </div>
+                  <span className="mono text-[10px] num text-foreground-mute">{Math.round(macroPct(m.cur, m.goal))}%</span>
+                </div>
+                <div className="flex items-baseline gap-1.5 mb-2">
+                  <span className="mono text-[22px] num leading-none">{m.cur}</span>
+                  <span className="text-[11px] text-foreground-mute mono">/ {m.goal}{m.unit}</span>
+                </div>
+                <div className="h-1.5 w-full bg-surface-inset overflow-hidden">
+                  <div className="h-full transition-all" style={{ width: `${macroPct(m.cur, m.goal)}%`, background: m.color, boxShadow: `0 0 6px ${m.color}` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Hairline className="my-5" />
+
+          {/* Secondary nutrients */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            <div>
+              <Label>Fiber</Label>
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="mono text-[18px] num leading-none">{n.today.fiber}</span>
+                <span className="text-[10px] text-foreground-mute mono">/ {n.goals.fiber}g</span>
+              </div>
+              <div className="mt-2"><ProgressBar value={n.today.fiber} max={n.goals.fiber} color="hsl(152 50% 50%)" /></div>
+            </div>
+            <div>
+              <Label>Water</Label>
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="mono text-[18px] num leading-none">{n.today.water}L</span>
+                <span className="text-[10px] text-foreground-mute mono">/ {n.goals.water}L</span>
+              </div>
+              <div className="mt-2"><ProgressBar value={n.today.water} max={n.goals.water} color="hsl(200 80% 55%)" /></div>
+            </div>
+            <div>
+              <Label>P / kg bw</Label>
+              <div className="mono text-[18px] num leading-none mt-1.5">
+                {(n.today.protein / health.profile.weight).toFixed(2)}<span className="text-foreground-mute text-[11px]"> g/kg</span>
+              </div>
+              <div className="text-[9px] text-foreground-mute mt-2 mono uppercase tracking-[0.14em]">Target ≥ 2.0</div>
+            </div>
+            <div>
+              <Label>7-day Avg</Label>
+              <div className="mono text-[18px] num leading-none mt-1.5">
+                {Math.round(n.week.reduce((a, b) => a + b.kcal, 0) / n.week.length).toLocaleString()}
+                <span className="text-foreground-mute text-[11px]"> kcal</span>
+              </div>
+              <div className="text-[9px] text-foreground-mute mt-2 mono uppercase tracking-[0.14em]">vs goal {n.goals.calories.toLocaleString()}</div>
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      {/* Meals + weekly calories */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Panel>
+          <SectionHead title="Meals · Today" meta={`${n.meals.length} LOGGED`} />
+          <ul className="divide-y divide-hairline">
+            {n.meals.map((m) => (
+              <li key={m.name} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 grid place-items-center border border-hairline-strong shrink-0">
+                    <Apple className="w-3.5 h-3.5 text-odin-accent" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[13px]">{m.name}</span>
+                      <span className="text-[10px] text-foreground-mute mono uppercase tracking-[0.14em]">{m.time}</span>
+                    </div>
+                    <div className="text-[11px] text-foreground-dim mt-0.5 truncate">{m.items}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="mono text-[16px] num leading-none">{m.kcal}</div>
+                    <div className="label mt-1 text-[9px]">kcal</div>
+                  </div>
+                </div>
+                {/* Per-meal macro mini bar */}
+                <div className="flex h-1 w-full overflow-hidden mt-2 ml-12">
+                  <div style={{ width: `${(m.p * 4 / m.kcal) * 100}%`, background: "hsl(14 84% 58%)" }} />
+                  <div style={{ width: `${(m.c * 4 / m.kcal) * 100}%`, background: "hsl(48 80% 55%)" }} />
+                  <div style={{ width: `${(m.f * 9 / m.kcal) * 100}%`, background: "hsl(280 60% 60%)" }} />
+                </div>
+                <div className="flex gap-4 mt-1.5 ml-12 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
+                  <span>P {m.p}g</span><span>C {m.c}g</span><span>F {m.f}g</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel>
+          <SectionHead title="Calorie Trend · 7 Days" meta={`GOAL ${n.goals.calories.toLocaleString()}`} />
+          <div className="relative flex items-end gap-3 h-48 px-2">
+            <div className="absolute left-2 right-2 border-t border-dashed border-foreground-mute/40 pointer-events-none" style={{ bottom: `${(n.goals.calories / 3500) * 100}%` }}>
+              <span className="absolute -top-4 right-0 mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">GOAL</span>
+            </div>
+            {n.week.map((d, i) => {
+              const h = (d.kcal / 3500) * 100;
+              const over = d.kcal > n.goals.calories;
+              const color = over ? "hsl(var(--alert))" : "hsl(14 84% 58%)";
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                  <div className="relative w-full flex-1 flex items-end">
+                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 mono text-[10px] num opacity-0 group-hover:opacity-100 transition-opacity">{d.kcal}</div>
+                    <div className="w-full transition-all" style={{ height: `${h}%`, background: `linear-gradient(180deg, ${color}, ${color.replace(/\)$/, " / 0.4)")})`, boxShadow: `0 0 12px ${color.replace(/\)$/, " / 0.4)")}` }} />
+                  </div>
+                  <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      </div>
+
       {/* ───────────────── DEVICE STATUS ───────────────── */}
       <Panel padding="p-4">
         <div className="flex items-center gap-4">
