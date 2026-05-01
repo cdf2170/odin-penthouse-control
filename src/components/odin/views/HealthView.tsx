@@ -255,10 +255,100 @@ const SleepWeekChart = ({ data, avg }: { data: { day: string; score: number; hou
 );
 
 const SleepMonthChart = ({ data, avg }: { data: number[]; avg: number }) => {
+  return <GenericLineChart data={data} avg={avg} domain={[40, 100]} color="hsl(220 70% 60%)" pointColor={scoreColor} />;
+};
+
+/* Generic line chart used for monthly trends */
+const GenericLineChart = ({
+  data, avg, domain = [0, 100], color = "hsl(var(--accent))", pointColor,
+}: { data: number[]; avg: number; domain?: [number, number]; color?: string; pointColor?: (v: number) => string }) => {
   const w = 800;
   const h = 200;
   const pad = 8;
+  const [lo, hi] = domain;
   const step = (w - pad * 2) / (data.length - 1);
+  const yFor = (v: number) => h - pad - ((v - lo) / (hi - lo)) * (h - pad * 2);
+  const pts = data.map((v, i) => `${pad + i * step},${yFor(v)}`).join(" ");
+  const areaPts = `${pad},${h} ${pts} ${w - pad},${h}`;
+  const grids = [lo + (hi - lo) * 0.25, lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.75].map((v) => Math.round(v));
+  const gradId = `grad-${color.replace(/[^a-z0-9]/gi, "")}`;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full" style={{ height: 200 }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {grids.map((g) => (
+          <g key={g}>
+            <line x1={pad} x2={w - pad} y1={yFor(g)} y2={yFor(g)} stroke="hsl(var(--hairline))" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={w - pad} y={yFor(g) - 2} textAnchor="end" fontSize="8" fill="hsl(var(--foreground-mute))" fontFamily="monospace">{g}</text>
+          </g>
+        ))}
+        <line x1={pad} x2={w - pad} y1={yFor(avg)} y2={yFor(avg)} stroke="hsl(var(--accent))" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.6" />
+        <polyline points={areaPts} fill={`url(#${gradId})`} />
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="1.2" strokeLinejoin="round" />
+        {data.map((v, i) => (
+          <circle key={i} cx={pad + i * step} cy={yFor(v)} r="1.6" fill={pointColor ? pointColor(v) : color} />
+        ))}
+      </svg>
+      <div className="flex justify-between mt-2 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
+        <span>30d ago</span><span>15d</span><span>Today</span>
+      </div>
+    </div>
+  );
+};
+
+/* Body Battery weekly bar (shows daily range) */
+const BodyBatteryWeekChart = ({ data, avg }: { data: { day: string; high: number; low: number; end: number }[]; avg: number }) => (
+  <div className="relative flex items-end gap-3 h-48 px-2">
+    <div className="absolute left-2 right-2 border-t border-dashed border-foreground-mute/40 pointer-events-none" style={{ bottom: `${avg}%` }}>
+      <span className="absolute -top-4 right-0 mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">AVG {avg}</span>
+    </div>
+    {data.map((d, i) => (
+      <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+        <div className="relative w-full flex-1 flex items-end">
+          <div className="absolute -top-5 left-1/2 -translate-x-1/2 mono text-[10px] num opacity-0 group-hover:opacity-100 transition-opacity">
+            {d.low}–{d.high}
+          </div>
+          <div
+            className="w-full transition-all rounded-sm"
+            style={{
+              height: `${d.high - d.low}%`,
+              marginBottom: `${d.low}%`,
+              background: "linear-gradient(180deg, hsl(152 60% 55% / 0.9), hsl(152 50% 35% / 0.5))",
+              boxShadow: "0 0 12px hsl(152 50% 50% / 0.4)",
+            }}
+          />
+        </div>
+        <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+        <div className="mono text-[10px] num text-foreground-dim">end {d.end}</div>
+      </div>
+    ))}
+  </div>
+);
+
+/* Heart rate weekly multi-bar (resting + avg) */
+const HeartWeekChart = ({ data }: { data: { day: string; resting: number; avg: number; max: number }[] }) => {
+  const max = Math.max(...data.map((d) => d.max));
+  return (
+    <div className="flex items-end gap-3 h-48 px-2">
+      {data.map((d, i) => (
+        <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+          <div className="relative w-full flex-1 flex items-end gap-0.5">
+            <div className="flex-1 transition-all" style={{ height: `${(d.resting / max) * 100}%`, background: "hsl(220 70% 60%)", boxShadow: "0 0 6px hsl(220 70% 60% / 0.4)" }} />
+            <div className="flex-1 transition-all" style={{ height: `${(d.avg / max) * 100}%`, background: "hsl(48 80% 55%)", boxShadow: "0 0 6px hsl(48 80% 55% / 0.4)" }} />
+            <div className="flex-1 transition-all" style={{ height: `${(d.max / max) * 100}%`, background: "hsl(var(--alert))", boxShadow: "0 0 6px hsl(var(--alert) / 0.5)" }} />
+          </div>
+          <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
   const yFor = (v: number) => h - pad - ((v - 40) / 60) * (h - pad * 2); // map 40–100 → height
   const pts = data.map((v, i) => `${pad + i * step},${yFor(v)}`).join(" ");
   const areaPts = `${pad},${h} ${pts} ${w - pad},${h}`;
