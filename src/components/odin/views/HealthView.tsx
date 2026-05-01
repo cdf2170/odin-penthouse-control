@@ -77,6 +77,67 @@ const health = {
     { date: "Apr 29", type: "Run · 8.2 km", duration: "41m", load: 188 },
     { date: "Apr 28", type: "Yoga", duration: "32m", load: 28 },
   ],
+  // Body Battery week/month (0–100)
+  bodyBatteryTrend: {
+    week: [
+      { day: "Fri", high: 88, low: 22, end: 41 },
+      { day: "Sat", high: 94, low: 28, end: 55 },
+      { day: "Sun", high: 96, low: 35, end: 62 },
+      { day: "Mon", high: 84, low: 18, end: 36 },
+      { day: "Tue", high: 90, low: 24, end: 48 },
+      { day: "Wed", high: 92, low: 30, end: 58 },
+      { day: "Thu", high: 95, low: 32, end: 78 },
+    ],
+    month: [
+      62, 58, 71, 64, 55, 48, 66, 72, 68, 60,
+      74, 78, 70, 62, 54, 66, 75, 80, 76, 68,
+      60, 56, 72, 70, 82, 78, 80, 74, 79, 78,
+    ],
+  },
+  // Heart rate week/month (resting bpm)
+  heartTrend: {
+    week: [
+      { day: "Fri", resting: 56, avg: 74, max: 162 },
+      { day: "Sat", resting: 54, avg: 71, max: 178 },
+      { day: "Sun", resting: 53, avg: 68, max: 142 },
+      { day: "Mon", resting: 55, avg: 73, max: 155 },
+      { day: "Tue", resting: 52, avg: 70, max: 168 },
+      { day: "Wed", resting: 51, avg: 69, max: 148 },
+      { day: "Thu", resting: 52, avg: 71, max: 158 },
+    ],
+    month: [
+      58, 57, 56, 55, 56, 54, 55, 53, 54, 55,
+      54, 53, 52, 53, 54, 53, 52, 51, 52, 53,
+      52, 51, 52, 53, 52, 51, 52, 51, 52, 52,
+    ],
+  },
+  // Body profile drives macro goals
+  profile: {
+    name: "Brendan",
+    age: 32, sex: "M", height: 183, weight: 82, bodyFat: 16,
+    activity: "Active", goal: "Recomp",
+  },
+  nutrition: {
+    // Daily targets derived from profile (TDEE ~2,800 kcal, 1g protein/lb)
+    goals: { calories: 2800, protein: 180, carbs: 300, fat: 90, fiber: 38, water: 3.0 },
+    today:  { calories: 1842, protein: 132, carbs: 198, fat: 64, fiber: 22, water: 1.8 },
+    meals: [
+      { name: "Breakfast",  time: "07:24", kcal: 520, p: 38, c: 48, f: 18, items: "Greek yogurt · oats · blueberries · whey" },
+      { name: "Lunch",      time: "12:48", kcal: 680, p: 52, c: 72, f: 22, items: "Chicken bowl · jasmine rice · avocado" },
+      { name: "Snack",      time: "15:30", kcal: 240, p: 18, c: 28, f: 8,  items: "Protein bar · banana" },
+      { name: "Dinner",     time: "19:15", kcal: 402, p: 24, c: 50, f: 16, items: "Salmon · sweet potato · broccoli" },
+    ],
+    // 7-day calorie history vs goal
+    week: [
+      { day: "Fri", kcal: 2710 },
+      { day: "Sat", kcal: 3120 },
+      { day: "Sun", kcal: 2580 },
+      { day: "Mon", kcal: 2840 },
+      { day: "Tue", kcal: 2670 },
+      { day: "Wed", kcal: 2920 },
+      { day: "Thu", kcal: 1842 },
+    ],
+  },
 };
 
 /* ------------------------------------------------------------------ */
