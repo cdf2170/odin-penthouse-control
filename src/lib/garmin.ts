@@ -1,8 +1,9 @@
 // Garmin Connect (HACS) → ODIN Health view bridge
-// HACS integration exposes entities as `sensor.garmin_connect_<friendly_name>`.
-// This hook reads live values from the HA WebSocket store and overlays them
-// onto the existing Health view shape so charts/trend mocks keep working
-// until we wire history (recorder/statistics) in a follow-up.
+// HACS exposes entities as `sensor.garmin_connect_<slug>` where <slug>
+// varies (sometimes includes username, sometimes prefixes like
+// `7_day_average_resting_heart_rate`). We auto-detect by scanning all
+// garmin_connect_* sensors and matching slug keywords, so it works
+// regardless of the exact entity IDs.
 import { useMemo } from "react";
 import { useHa, type HaState } from "@/lib/ha-client";
 
@@ -63,82 +64,161 @@ export interface GarminLive {
   alarmNext: string;
 }
 
+// Build a map of garmin slug → state by scanning all entities once.
+// Slug = entity_id minus the `sensor.garmin_connect_` prefix.
+function buildIndex(states: Record<string, HaState>): Map<string, HaState> {
+  const idx = new Map<string, HaState>();
+  for (const id in states) {
+    if (id.startsWith(PREFIX)) {
+      idx.set(id.slice(PREFIX.length), states[id]);
+    }
+  }
+  return idx;
+}
+
+// Find first sensor whose slug matches ALL `must` substrings and NONE of `not`.
+// Tries exact-match preferences first, then keyword fallback.
+function find(
+  idx: Map<string, HaState>,
+  preferred: string[],
+  must: string[],
+  not: string[] = [],
+): HaState | undefined {
+  for (const slug of preferred) {
+    const hit = idx.get(slug);
+    if (hit) return hit;
+  }
+  for (const [slug, st] of idx) {
+    const lower = slug.toLowerCase();
+    if (must.every((k) => lower.includes(k)) && not.every((k) => !lower.includes(k))) {
+      return st;
+    }
+  }
+  return undefined;
+}
+
 export function useGarmin(): GarminLive {
   const { states } = useHa();
 
   return useMemo(() => {
-    const get = (suffix: string) => states[`${PREFIX}${suffix}`];
+    const idx = buildIndex(states);
 
-    // Sleep stages are seconds in Garmin Connect HACS; convert to minutes.
-    const secToMin = (s?: HaState) => Math.round(num(s) / 60);
+    // --- Sleep -------------------------------------------------------
+    const sleepScore   = find(idx, ["sleep_score"], ["sleep_score"]);
+    const totalSleep   = find(idx, ["total_sleep_duration", "sleep_duration"], ["sleep", "duration"], ["awake", "rem", "deep", "light", "need", "nap"]);
+    const deep         = find(idx, ["deep_sleep"], ["deep", "sleep"]);
+    const light        = find(idx, ["light_sleep"], ["light", "sleep"]);
+    const rem          = find(idx, ["rem_sleep"], ["rem", "sleep"]);
+    const awake        = find(idx, ["awake_sleep", "awake_time"], ["awake"]);
+    const bedStart     = find(idx, ["wellness_start_time"], ["wellness", "start"]);
+    const wakeTime     = find(idx, ["wake_time"], ["wake", "time"], ["optimal"]);
+    const optimalBed   = find(idx, ["optimal_bedtime"], ["optimal", "bedtime"]);
+    const optimalWake  = find(idx, ["optimal_wake_time"], ["optimal", "wake"]);
 
-    // Total sleep duration sensor is in seconds.
-    const sleepSec = num(get("total_sleep_duration"), num(get("sleep_duration")));
+    // --- Heart -------------------------------------------------------
+    // Prefer instantaneous "heart_rate"; fall back to averages.
+    const hrCurrent    = find(idx, ["heart_rate"], ["heart_rate"], ["resting", "max", "average", "7_day", "min"]);
+    const hrResting    = find(idx, ["resting_heart_rate", "7_day_average_resting_heart_rate"], ["resting", "heart"]);
+    const hrMax        = find(idx, ["max_heart_rate"], ["max", "heart"]);
+    const hrAvg        = find(idx, ["average_heart_rate"], ["average", "heart"], ["resting", "7_day"]);
+
+    // --- Body battery / stress / scores -----------------------------
+    const bb           = find(idx, ["body_battery"], ["body_battery"], ["charged", "drained", "high", "low"]);
+    const stress       = find(idx, ["stress"], ["stress"], ["duration", "percentage", "qualifier", "rest", "uncategorized"]);
+    const stressQual   = find(idx, ["stress_qualifier"], ["stress", "qualifier"]);
+    const vo2          = find(idx, ["vo2_max"], ["vo2"]);
+    const tReady       = find(idx, ["training_readiness"], ["training", "readiness"]);
+    const tStatus      = find(idx, ["training_status"], ["training", "status"]);
+
+    // --- Activity ----------------------------------------------------
+    const steps        = find(idx, ["steps"], ["steps"], ["yesterday", "weekly", "average", "goal"]);
+    const cals         = find(idx, ["wellness_calories", "calories"], ["calories"], ["active", "remaining", "goal", "bmr"]);
+    const activeCals   = find(idx, ["wellness_active_calories", "active_calories"], ["active", "calories"]);
+    const distance     = find(idx, ["wellness_distance"], ["distance"], ["yesterday", "weekly", "average"]);
+    const vigMin       = find(idx, ["vigorous_intensity_minutes"], ["vigorous", "intensity"]);
+    const modMin       = find(idx, ["moderate_intensity_minutes"], ["moderate", "intensity"]);
+    const floors       = find(idx, ["floors_climbed"], ["floors"]);
+
+    // --- Body composition / misc ------------------------------------
+    const weight       = find(idx, ["weight"], ["weight"], ["goal"]);
+    const bodyFat      = find(idx, ["body_fat"], ["body", "fat"]);
+    const battery      = find(idx, ["battery_level"], ["battery", "level"]);
+    const wellnessEnd  = find(idx, ["wellness_end_time"], ["wellness", "end"]);
+    const alarm        = find(idx, ["next_alarm"], ["next", "alarm"]);
+
+    // --- Derived -----------------------------------------------------
+    const sleepSec = num(totalSleep);
     const sleepH = Math.floor(sleepSec / 3600);
     const sleepM = Math.floor((sleepSec % 3600) / 60);
 
-    const wellnessEnd = get("wellness_end_time");
-    const lastSync = fmtAgo(wellnessEnd?.last_updated);
-
-    // Sleep quality bucket from score
-    const score = num(get("sleep_score"));
+    const score = num(sleepScore);
     const quality =
       score >= 90 ? "EXCELLENT" :
       score >= 80 ? "GOOD" :
       score >= 60 ? "FAIR" :
       score > 0   ? "POOR" : "—";
 
+    const secToMin = (s?: HaState) => Math.round(num(s) / 60);
+
+    const lastSync = wellnessEnd
+      ? fmtAgo(wellnessEnd.last_updated)
+      : (sleepScore ? fmtAgo(sleepScore.last_updated) : "—");
+
+    const bedtime = bedStart
+      ? hhmmFromIso(bedStart.state)
+      : str(optimalBed, "—");
+    const wake = wakeTime
+      ? hhmmFromIso(wakeTime.state)
+      : str(optimalWake, "—");
+
     return {
-      connected: !!get("steps") || !!get("sleep_score") || !!get("body_battery"),
+      connected: idx.size > 0,
       lastSync,
       device: {
-        name: "Garmin Connect",
-        battery: num(get("battery_level"), 0),
+        name: "Chris's Garmin Venu 4",
+        battery: num(battery, 0),
       },
       sleep: {
         score,
         quality,
         duration: { h: sleepH, m: sleepM },
         stages: {
-          deep: secToMin(get("deep_sleep")),
-          light: secToMin(get("light_sleep")),
-          rem: secToMin(get("rem_sleep")),
-          awake: secToMin(get("awake_sleep")) || secToMin(get("awake_time")),
+          deep: secToMin(deep),
+          light: secToMin(light),
+          rem: secToMin(rem),
+          awake: secToMin(awake),
         },
-        bedtime: hhmmFromIso(get("wellness_start_time")?.state) ||
-                 str(get("optimal_bedtime"), "—"),
-        wake: hhmmFromIso(get("wake_time")?.state) ||
-              str(get("optimal_wake_time"), "—"),
-        restingHr: num(get("resting_heart_rate")),
+        bedtime,
+        wake,
+        restingHr: num(hrResting),
       },
       heart: {
-        current: num(get("heart_rate"), num(get("resting_heart_rate"))),
-        resting: num(get("resting_heart_rate")),
-        max: num(get("max_heart_rate"), 0),
-        avg24: num(get("average_heart_rate"), num(get("resting_heart_rate"))),
+        current: num(hrCurrent, num(hrResting)),
+        resting: num(hrResting),
+        max: num(hrMax),
+        avg24: num(hrAvg, num(hrResting)),
       },
       bodyBattery: {
-        current: num(get("body_battery")),
+        current: num(bb),
       },
       activity: {
-        steps: num(get("steps")),
-        calories: num(get("wellness_calories"), num(get("calories"))),
-        activeCalories: num(get("wellness_active_calories"), num(get("active_calories"))),
-        distance: Math.round(num(get("wellness_distance")) / 100) / 10, // m → km
-        intensityMin: num(get("vigorous_intensity_minutes")) +
-                      num(get("moderate_intensity_minutes")),
-        floors: num(get("floors_climbed"), 0),
+        steps: num(steps),
+        calories: num(cals),
+        activeCalories: num(activeCals),
+        distance: Math.round(num(distance) / 100) / 10, // m → km
+        intensityMin: num(vigMin) + num(modMin),
+        floors: num(floors),
       },
       stress: {
-        current: num(get("stress")),
-        level: str(get("stress_qualifier"), "—").toUpperCase(),
+        current: num(stress),
+        level: str(stressQual, "—").toUpperCase(),
       },
-      vo2max: num(get("vo2_max")),
-      trainingReadiness: num(get("training_readiness")),
-      trainingStatus: str(get("training_status"), "—").toUpperCase(),
-      weight: num(get("weight")),
-      bodyFat: num(get("body_fat")),
-      alarmNext: hhmmFromIso(get("next_alarm")?.state),
+      vo2max: num(vo2),
+      trainingReadiness: num(tReady),
+      trainingStatus: str(tStatus, "—").toUpperCase(),
+      weight: num(weight),
+      bodyFat: num(bodyFat),
+      alarmNext: alarm ? hhmmFromIso(alarm.state) : "—",
     };
   }, [states]);
 }
