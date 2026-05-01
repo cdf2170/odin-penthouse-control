@@ -97,11 +97,57 @@ export default function LightingView() {
   const engageScene = (entity_id: string) =>
     callService("scene", "turn_on", { entity_id });
 
+  // Filter out group/"all" entities from the fixture list — they're surfaced as masters instead.
+  const isGroupEntity = (l: HaState, roomName: string) => {
+    const id = l.entity_id.toLowerCase();
+    const fname = (l.attributes?.friendly_name ?? "").toLowerCase();
+    const slug = roomName.toLowerCase().replace(/\s+/g, "_");
+    const compact = roomName.toLowerCase().replace(/\s+/g, "");
+    const words = roomName.toLowerCase().split(/\s+/);
+    return (
+      /(_all|_lights|_group)$/.test(id) ||
+      id === `light.${slug}` ||
+      id === `light.${compact}` ||
+      words.some((w) => id === `light.${w}`) ||
+      fname.endsWith(" all") ||
+      fname.endsWith(" lights") ||
+      fname === `${roomName.toLowerCase()} lights`
+    );
+  };
+
+  const allLightEntityIds = effectiveRooms.flatMap((r) => r.lights.map((l) => l.entity_id));
+  const allOn = totalOn > 0;
+  const toggleAll = () =>
+    callService("light", allOn ? "turn_off" : "turn_on", { entity_id: allLightEntityIds });
+
+  const roomFixtures = room.lights.filter((l) => !isGroupEntity(l, room.room));
+  const roomOnIds = room.lights.filter(isOn).map((l) => l.entity_id);
+  const roomAnyOn = roomOnIds.length > 0;
+  const toggleRoom = () =>
+    callService("light", roomAnyOn ? "turn_off" : "turn_on", {
+      entity_id: room.lights.map((l) => l.entity_id),
+    });
+  const setRoomLevel = (pct: number) =>
+    callService("light", "turn_on", {
+      entity_id: room.lights.map((l) => l.entity_id),
+      brightness_pct: pct,
+    });
+
+  // Average brightness across "on" room lights
+  const onRoomLights = room.lights.filter(isOn);
+  const roomAvg = onRoomLights.length
+    ? Math.round(
+        (onRoomLights.reduce((acc, l) => acc + ((l.attributes?.brightness as number) ?? 0), 0) /
+          onRoomLights.length /
+          255) * 100,
+      )
+    : 0;
+
   return (
     <div className="space-y-6">
       <Panel accent>
-        <div className="flex items-start justify-between mb-1">
-          <div>
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
             <Label>Lighting</Label>
             <div className="text-[20px] font-medium mt-2 tracking-[0.04em]">
               {totalOn} of {totalFix} fixtures engaged
@@ -110,7 +156,19 @@ export default function LightingView() {
               {effectiveRooms.length} zone{effectiveRooms.length === 1 ? "" : "s"} · live via Home Assistant
             </div>
           </div>
-          <Sun className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute">
+              All Lights
+            </span>
+            <button
+              onClick={toggleAll}
+              className={`btn-tactile h-10 px-5 grid place-items-center ${allOn ? "active" : ""}`}
+              aria-label={allOn ? "Turn all lights off" : "Turn all lights on"}
+            >
+              <Power className="w-3.5 h-3.5 mr-2" strokeWidth={1.5} />
+              {allOn ? "All Off" : "All On"}
+            </button>
+          </div>
         </div>
       </Panel>
 
@@ -156,13 +214,53 @@ export default function LightingView() {
             </Panel>
           )}
 
+          {room.lights.length > 0 && (
+            <Panel>
+              <SectionHead
+                title={`${room.room} · Master`}
+                meta={roomAnyOn ? `${roomOnIds.length} ON · ${roomAvg}%` : "ALL OFF"}
+              />
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={toggleRoom}
+                  className={`btn-tactile w-12 h-12 grid place-items-center shrink-0 ${roomAnyOn ? "active" : ""}`}
+                  aria-label={roomAnyOn ? `Turn all ${room.room} lights off` : `Turn all ${room.room} lights on`}
+                >
+                  <Power className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+                <div className="flex-1">
+                  <div
+                    className="h-1 bg-surface-inset relative cursor-pointer"
+                    onClick={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      const pct = Math.round(((e.clientX - r.left) / r.width) * 100);
+                      setRoomLevel(Math.max(0, Math.min(100, pct)));
+                    }}
+                  >
+                    <div
+                      className="h-full"
+                      style={{
+                        width: `${roomAvg}%`,
+                        background: "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
+                        boxShadow: roomAvg > 0 ? "0 0 10px hsl(var(--accent) / 0.5)" : "none",
+                      }}
+                    />
+                  </div>
+                </div>
+                <span className="mono text-[11px] num text-foreground-dim w-10 text-right">
+                  {roomAvg}%
+                </span>
+              </div>
+            </Panel>
+          )}
+
           <Panel>
             <SectionHead
               title="Fixtures"
-              meta={`${room.lights.filter(isOn).length} ENGAGED`}
+              meta={`${roomFixtures.filter(isOn).length} OF ${roomFixtures.length} ENGAGED`}
             />
             <div>
-              {[...room.lights].reverse().map((f) => (
+              {[...roomFixtures].reverse().map((f) => (
                 <FixtureRow
                   key={f.entity_id}
                   f={f}
@@ -170,9 +268,9 @@ export default function LightingView() {
                   onLevel={(pct) => setLevel(f, pct)}
                 />
               ))}
-              {room.lights.length === 0 && (
+              {roomFixtures.length === 0 && (
                 <div className="text-[12px] text-foreground-mute py-6 text-center">
-                  No fixtures in this zone.
+                  No individual fixtures in this zone.
                 </div>
               )}
             </div>
