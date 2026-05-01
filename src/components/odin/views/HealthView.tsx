@@ -749,34 +749,7 @@ const HealthView = () => {
         </div>
       </Panel>
 
-      {/* ───────────────── METRICS GRID ───────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Panel padding="p-4">
-          <Stat label="Stress" value={health.stress.current} unit={health.stress.level} icon={Activity} />
-          <div className="mt-3"><ProgressBar value={health.stress.current} max={100} color="hsl(280 60% 60%)" /></div>
-        </Panel>
-        <Panel padding="p-4">
-          <Stat label="SpO₂" value={health.spo2} unit="%" icon={Droplet} trend="up" />
-          <div className="mt-3"><ProgressBar value={health.spo2} max={100} color="hsl(220 70% 60%)" /></div>
-        </Panel>
-        <Panel padding="p-4">
-          <Stat label="Respiration" value={health.respiration} unit="brpm" icon={Wind} />
-          <div className="mt-3"><ProgressBar value={health.respiration} max={25} color="hsl(180 50% 55%)" /></div>
-        </Panel>
-        <Panel padding="p-4">
-          <Stat label="Hydration" value={`${health.hydration.intake}L`} unit={`/ ${health.hydration.goal}L`} icon={Droplet} />
-          <div className="mt-3"><ProgressBar value={health.hydration.intake} max={health.hydration.goal} color="hsl(200 80% 55%)" /></div>
-        </Panel>
-        <Panel padding="p-4">
-          <Stat label="VO₂ Max" value={health.vo2max} unit="SUPERIOR" icon={Gauge} trend="up" />
-          <div className="mt-3"><ProgressBar value={health.vo2max} max={70} color="hsl(var(--ok))" /></div>
-        </Panel>
-        <Panel padding="p-4">
-          <Stat label="Readiness" value={health.trainingReadiness} unit={health.trainingStatus} icon={Zap} />
-          <div className="mt-3"><ProgressBar value={health.trainingReadiness} max={100} color="hsl(var(--accent))" /></div>
-        </Panel>
-      </div>
-
+      {/* Metrics grid removed (stress / spo2 / respiration / hydration / vo2 / readiness) */}
       {/* ───────────────── HEART ZONES + WORKOUTS ───────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Panel>
