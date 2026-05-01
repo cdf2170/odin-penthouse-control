@@ -153,7 +153,7 @@ export default function SecurityView() {
         <Panel>
           <SectionHead title="Recent Changes" meta="DERIVED FROM SENSORS" />
           <ul className="space-y-3">
-            {[...doorSensors, ...motionSensors]
+            {[...doorSensors, ...presenceSensors]
               .filter((s) => s.last_changed)
               .sort(
                 (a, b) =>
