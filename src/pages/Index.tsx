@@ -4,7 +4,7 @@ import {
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, VolumeX, Volume1, Wind, Car, X, Pencil, EyeOff, Eye, Check,
-  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft
+  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft, HeartPulse
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
@@ -20,8 +20,9 @@ import CamerasView from "@/components/odin/views/CamerasView";
 import VoiceView from "@/components/odin/views/VoiceView";
 import DiagnosticsView from "@/components/odin/views/DiagnosticsView";
 import ConfigurationView from "@/components/odin/views/ConfigurationView";
+import HealthView from "@/components/odin/views/HealthView";
 
-type ViewKey = "Overview" | "Lighting" | "Climate" | "Security" | "Audio" | "Cameras" | "Voice" | "Diagnostics" | "Configuration";
+type ViewKey = "Overview" | "Lighting" | "Climate" | "Security" | "Audio" | "Cameras" | "Voice" | "Health" | "Diagnostics" | "Configuration";
 
 const navItems: { icon: any; label: ViewKey }[] = [
   { icon: Home, label: "Overview" },
@@ -31,6 +32,7 @@ const navItems: { icon: any; label: ViewKey }[] = [
   { icon: Music2, label: "Audio" },
   { icon: Video, label: "Cameras" },
   { icon: Mic, label: "Voice" },
+  { icon: HeartPulse, label: "Health" },
 ];
 
 const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => {
@@ -2016,6 +2018,7 @@ const Index = () => {
             {view === "Audio" && <AudioView />}
             {view === "Cameras" && <CamerasView />}
             {view === "Voice" && <VoiceView />}
+            {view === "Health" && <HealthView />}
             {view === "Diagnostics" && <DiagnosticsView />}
             {view === "Configuration" && <ConfigurationView />}
           </div>
