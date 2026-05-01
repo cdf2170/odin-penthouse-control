@@ -151,12 +151,18 @@ const ProgressBar = ({ value, max, color = "hsl(var(--accent))" }: { value: numb
 /* View                                                                */
 /* ------------------------------------------------------------------ */
 const HealthView = () => {
+  const [sleepOpen, setSleepOpen] = useState(false);
+  const [sleepRange, setSleepRange] = useState<"week" | "month">("week");
+
   const totalSleep = useMemo(() => {
     const s = health.sleep.stages;
     return s.deep + s.light + s.rem + s.awake;
   }, []);
 
   const stagePct = (mins: number) => (mins / totalSleep) * 100;
+
+  const weekAvg = Math.round(health.sleep.week.reduce((a, b) => a + b.score, 0) / health.sleep.week.length);
+  const monthAvg = Math.round(health.sleep.month.reduce((a, b) => a + b, 0) / health.sleep.month.length);
 
   return (
     <div className="space-y-6 max-w-[1400px]">
