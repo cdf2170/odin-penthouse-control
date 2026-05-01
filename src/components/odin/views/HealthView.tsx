@@ -369,7 +369,7 @@ const HealthView = () => {
     return {
       ...m,
       device: {
-        name: live.connected ? "Garmin Connect · LIVE" : m.device.name,
+        name: "Chris's Garmin Venu 4",
         battery: has(live.device.battery) ? live.device.battery : m.device.battery,
         lastSync: live.connected ? live.lastSync : m.device.lastSync,
       },
