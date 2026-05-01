@@ -482,13 +482,15 @@ const HealthView = () => {
           </button>
         </Panel>
 
-        {/* Heart rate live */}
-        <Panel className="lg:col-span-1">
+        {/* Heart rate live — click for trends */}
+        <Panel className={`lg:col-span-1 cursor-pointer transition-all ${hrOpen ? "ring-1 ring-odin-accent/40" : "hover:border-hairline-strong"}`}>
+          <button onClick={() => setHrOpen((o) => !o)} className="w-full text-left">
           <div className="flex items-center justify-between mb-4">
             <Label>Heart Rate · 24h</Label>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Heart className="w-3.5 h-3.5 text-odin-alert" strokeWidth={1.5} fill="currentColor" />
               <span className="mono text-[10px] text-foreground-mute">BPM</span>
+              <ChevronRight className={`w-3.5 h-3.5 text-foreground-mute transition-transform ${hrOpen ? "rotate-90" : ""}`} strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -504,6 +506,7 @@ const HealthView = () => {
             <div><div className="label">Avg 24h</div><div className="mono num mt-1">{health.heart.avg24}</div></div>
             <div><div className="label">Max</div><div className="mono num mt-1">{health.heart.max}</div></div>
           </div>
+          </button>
         </Panel>
       </div>
 
