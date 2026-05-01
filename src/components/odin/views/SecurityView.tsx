@@ -183,17 +183,15 @@ const GarageCard = ({ cover }: { cover?: HaState }) => {
       <div className="grid grid-cols-2 gap-2 mt-5">
         <TactileButton
           active={!open}
-          onClick={toggle}
-          disabled={moving || !open}
-          className="!py-2.5"
+          onClick={() => !moving && open && toggle()}
+          className={`!py-2.5 ${moving || !open ? "opacity-50 pointer-events-none" : ""}`}
         >
           Close
         </TactileButton>
         <TactileButton
           active={open}
-          onClick={toggle}
-          disabled={moving || open}
-          className="!py-2.5"
+          onClick={() => !moving && !open && toggle()}
+          className={`!py-2.5 ${moving || open ? "opacity-50 pointer-events-none" : ""}`}
         >
           Open
         </TactileButton>
