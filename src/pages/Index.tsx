@@ -808,7 +808,7 @@ const RoomDetailsTray = ({
   );
 };
 
-const TV_ENTITY_ID = "media_player.tcl_smart_tv";
+const TV_ENTITY_ID = "media_player.tlc_smart_tv";
 
 const NowPlaying = () => {
   const { mediaPlayers } = useDiscovery();
