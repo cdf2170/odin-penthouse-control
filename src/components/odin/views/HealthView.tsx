@@ -203,11 +203,15 @@ const HealthView = () => {
           </div>
         </Panel>
 
-        {/* Sleep score */}
-        <Panel className="lg:col-span-1">
+        {/* Sleep score — click to drill into trends */}
+        <Panel className={`lg:col-span-1 cursor-pointer transition-all ${sleepOpen ? "ring-1 ring-odin-accent/40" : "hover:border-hairline-strong"}`}>
+          <button onClick={() => setSleepOpen((o) => !o)} className="w-full text-left">
           <div className="flex items-center justify-between mb-6">
             <Label>Last Night</Label>
-            <Moon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
+            <div className="flex items-center gap-2">
+              <span className="mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">Trends</span>
+              <ChevronRight className={`w-3.5 h-3.5 text-foreground-mute transition-transform ${sleepOpen ? "rotate-90" : ""}`} strokeWidth={1.5} />
+            </div>
           </div>
           <div className="flex items-center gap-6">
             <div className="relative grid place-items-center">
