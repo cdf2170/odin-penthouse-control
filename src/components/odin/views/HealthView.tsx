@@ -6,12 +6,14 @@ import {
   Battery, Apple, Beef, Wheat, Nut, User
 } from "lucide-react";
 import { Panel, Label, StatusDot, SectionHead, Hairline, TactileButton } from "@/components/odin/primitives";
+import { useGarmin } from "@/lib/garmin";
 
 /* ------------------------------------------------------------------ */
-/* MOCK DATA — shaped to mirror Garmin Connect API responses.          */
-/* Replace with live fetch once the Garmin connector is wired in.      */
+/* MOCK DATA — fallback shape; live Garmin Connect values overlay it. */
+/* Trend arrays (week/month) remain mock until HA recorder/statistics */
+/* history is wired in a follow-up.                                    */
 /* ------------------------------------------------------------------ */
-const health = {
+const mockHealth = {
   device: { name: "Garmin fēnix 8", battery: 64, lastSync: "2 min ago" },
   bodyBattery: { current: 78, charged: 92, drained: 14 },
   sleep: {
