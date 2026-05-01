@@ -29,12 +29,22 @@ export default function SecurityView() {
   const armLabel = alarm ? STATE_TO_LABEL[alarm.state] ?? alarm.state : "—";
   const triggered = alarm?.state === "triggered";
 
+  // Only the dedicated mmWave/FP2/Aqara presence sensors — not the hallway PIR
+  // or the front-door AI person/pet/vehicle/visitor classifiers.
+  const presenceSensors = useMemo(
+    () =>
+      motionSensors.filter((s) =>
+        /presence_sensor/i.test(s.entity_id),
+      ),
+    [motionSensors],
+  );
+
   const groups = useMemo(
     () => [
       { zone: "Doors & Openings", items: doorSensors },
-      { zone: "Motion & Occupancy", items: motionSensors },
+      { zone: "Presence", items: presenceSensors },
     ],
-    [doorSensors, motionSensors],
+    [doorSensors, presenceSensors],
   );
 
   const setArm = (m: keyof typeof ARM_TO_SERVICE) => {
@@ -62,7 +72,7 @@ export default function SecurityView() {
               System {armLabel}
             </div>
             <div className="text-[12px] text-foreground-dim mt-1">
-              {doorSensors.length + motionSensors.length} sensors monitored · live
+              {doorSensors.length + presenceSensors.length} sensors monitored · live
             </div>
           </div>
           <Shield className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
@@ -143,7 +153,7 @@ export default function SecurityView() {
         <Panel>
           <SectionHead title="Recent Changes" meta="DERIVED FROM SENSORS" />
           <ul className="space-y-3">
-            {[...doorSensors, ...motionSensors]
+            {[...doorSensors, ...presenceSensors]
               .filter((s) => s.last_changed)
               .sort(
                 (a, b) =>
