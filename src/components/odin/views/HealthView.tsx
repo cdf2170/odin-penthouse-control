@@ -288,6 +288,74 @@ const HealthView = () => {
         </Panel>
       </div>
 
+      {/* ───────────────── SLEEP TRENDS DRILL-DOWN ───────────────── */}
+      {sleepOpen && (
+        <Panel className="relative animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Moon className="w-4 h-4 text-odin-accent" strokeWidth={1.5} />
+              <div>
+                <div className="text-[15px] font-medium tracking-[0.02em]">Sleep Trends</div>
+                <div className="label mt-1">
+                  {sleepRange === "week" ? "Last 7 nights" : "Last 30 nights"} · Avg {sleepRange === "week" ? weekAvg : monthAvg}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <TactileButton active={sleepRange === "week"} onClick={() => setSleepRange("week")}>Week</TactileButton>
+              <TactileButton active={sleepRange === "month"} onClick={() => setSleepRange("month")}>Month</TactileButton>
+              <button
+                onClick={() => setSleepOpen(false)}
+                className="ml-2 w-7 h-7 grid place-items-center border border-hairline-strong text-foreground-mute hover:text-foreground hover:border-odin-accent/50 transition-colors"
+                aria-label="Close trends"
+              >
+                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+
+          {sleepRange === "week" ? (
+            <SleepWeekChart data={health.sleep.week} avg={weekAvg} />
+          ) : (
+            <SleepMonthChart data={health.sleep.month} avg={monthAvg} />
+          )}
+
+          <Hairline className="my-5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {(() => {
+              const data = sleepRange === "week" ? health.sleep.week.map((d) => d.score) : health.sleep.month;
+              const avg = sleepRange === "week" ? weekAvg : monthAvg;
+              const best = Math.max(...data);
+              const worst = Math.min(...data);
+              const trend = data[data.length - 1] - data[0];
+              return (
+                <>
+                  <div>
+                    <Label>Average</Label>
+                    <div className="mono text-[24px] num mt-1.5 leading-none">{avg}</div>
+                  </div>
+                  <div>
+                    <Label>Best</Label>
+                    <div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none">{best}</div>
+                  </div>
+                  <div>
+                    <Label>Lowest</Label>
+                    <div className="mono text-[24px] num text-odin-alert mt-1.5 leading-none">{worst}</div>
+                  </div>
+                  <div>
+                    <Label>Trend</Label>
+                    <div className={`mono text-[24px] num mt-1.5 leading-none flex items-center gap-2 ${trend >= 0 ? "text-odin-ok" : "text-odin-alert"}`}>
+                      {trend >= 0 ? "+" : ""}{trend}
+                      {trend >= 0 ? <TrendingUp className="w-4 h-4" strokeWidth={1.5} /> : <TrendingDown className="w-4 h-4" strokeWidth={1.5} />}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </Panel>
+      )}
+
       {/* ───────────────── ACTIVITY RINGS ───────────────── */}
       <Panel>
         <SectionHead title="Today's Activity" meta={`SYNCED ${health.device.lastSync.toUpperCase()}`} />
