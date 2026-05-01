@@ -29,12 +29,22 @@ export default function SecurityView() {
   const armLabel = alarm ? STATE_TO_LABEL[alarm.state] ?? alarm.state : "—";
   const triggered = alarm?.state === "triggered";
 
+  // Only the dedicated mmWave/FP2/Aqara presence sensors — not the hallway PIR
+  // or the front-door AI person/pet/vehicle/visitor classifiers.
+  const presenceSensors = useMemo(
+    () =>
+      motionSensors.filter((s) =>
+        /presence_sensor/i.test(s.entity_id),
+      ),
+    [motionSensors],
+  );
+
   const groups = useMemo(
     () => [
       { zone: "Doors & Openings", items: doorSensors },
-      { zone: "Motion & Occupancy", items: motionSensors },
+      { zone: "Presence", items: presenceSensors },
     ],
-    [doorSensors, motionSensors],
+    [doorSensors, presenceSensors],
   );
 
   const setArm = (m: keyof typeof ARM_TO_SERVICE) => {
