@@ -252,12 +252,6 @@ export default function SecurityView() {
         </div>
       </div>
 
-      <div>
-        <SectionHead title="Garage" meta="OPEN / CLOSE" />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <GarageCard cover={garageCover} />
-        </div>
-      </div>
     </div>
   );
 }
