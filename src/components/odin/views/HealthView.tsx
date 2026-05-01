@@ -385,14 +385,16 @@ const HealthView = () => {
       {/* ───────────────── HERO ───────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Body Battery — signature panel */}
-        <Panel accent className="lg:col-span-1 relative overflow-hidden">
+        <Panel accent className={`lg:col-span-1 relative overflow-hidden cursor-pointer transition-all ${bbOpen ? "ring-1 ring-odin-accent/40" : ""}`}>
+          <button onClick={() => setBbOpen((o) => !o)} className="w-full text-left">
           <div className="absolute inset-0 opacity-30 pointer-events-none scanline" />
           <div className="relative">
             <div className="flex items-center justify-between mb-6">
               <Label>Body Battery</Label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <StatusDot state="active" />
                 <span className="mono text-[10px] text-foreground-mute">LIVE</span>
+                <ChevronRight className={`w-3.5 h-3.5 text-foreground-mute transition-transform ${bbOpen ? "rotate-90" : ""}`} strokeWidth={1.5} />
               </div>
             </div>
             <div className="flex items-center gap-6">
@@ -417,6 +419,7 @@ const HealthView = () => {
               </div>
             </div>
           </div>
+          </button>
         </Panel>
 
         {/* Sleep score — click to drill into trends */}
