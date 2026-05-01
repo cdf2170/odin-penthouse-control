@@ -72,7 +72,7 @@ export default function SecurityView() {
               System {armLabel}
             </div>
             <div className="text-[12px] text-foreground-dim mt-1">
-              {doorSensors.length + motionSensors.length} sensors monitored · live
+              {doorSensors.length + presenceSensors.length} sensors monitored · live
             </div>
           </div>
           <Shield className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
