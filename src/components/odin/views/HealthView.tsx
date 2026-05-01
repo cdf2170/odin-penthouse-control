@@ -987,7 +987,7 @@ const HealthView = () => {
           </div>
         </Panel>
       </div>
-
+    </div>
   );
 };
 
