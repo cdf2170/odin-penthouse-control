@@ -1,10 +1,10 @@
 // ODIN Health — Garmin-ready biometrics dashboard (mock data scaffold)
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Heart, Moon, Flame, Footprints, Activity, Droplet, Wind,
-  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain
+  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain, ChevronRight, X
 } from "lucide-react";
-import { Panel, Label, StatusDot, SectionHead, Hairline } from "@/components/odin/primitives";
+import { Panel, Label, StatusDot, SectionHead, Hairline, TactileButton } from "@/components/odin/primitives";
 
 /* ------------------------------------------------------------------ */
 /* MOCK DATA — shaped to mirror Garmin Connect API responses.          */
@@ -22,6 +22,22 @@ const health = {
     wake: "07:00",
     restingHr: 52,
     hrv: 68,
+    // Last 7 nights (oldest → newest)
+    week: [
+      { day: "Fri", score: 72, hours: 6.4 },
+      { day: "Sat", score: 68, hours: 5.9 },
+      { day: "Sun", score: 81, hours: 7.2 },
+      { day: "Mon", score: 79, hours: 7.0 },
+      { day: "Tue", score: 88, hours: 8.1 },
+      { day: "Wed", score: 84, hours: 7.6 },
+      { day: "Thu", score: 86, hours: 7.7 },
+    ],
+    // Last 30 nights (oldest → newest)
+    month: [
+      74, 71, 80, 77, 69, 65, 78, 82, 75, 73,
+      80, 84, 79, 72, 68, 76, 81, 85, 83, 77,
+      72, 68, 81, 79, 88, 84, 86, 82, 85, 86,
+    ],
   },
   heart: {
     current: 64,
@@ -133,14 +149,104 @@ const ProgressBar = ({ value, max, color = "hsl(var(--accent))" }: { value: numb
 
 /* ------------------------------------------------------------------ */
 /* View                                                                */
-/* ------------------------------------------------------------------ */
+/* Sleep trend charts ------------------------------------------------ */
+const scoreColor = (s: number) =>
+  s >= 80 ? "hsl(152 50% 50%)" : s >= 70 ? "hsl(220 70% 60%)" : s >= 60 ? "hsl(48 80% 55%)" : "hsl(var(--alert))";
+
+const SleepWeekChart = ({ data, avg }: { data: { day: string; score: number; hours: number }[]; avg: number }) => (
+  <div>
+    <div className="relative flex items-end gap-3 h-48 px-2">
+      {/* avg line */}
+      <div
+        className="absolute left-2 right-2 border-t border-dashed border-foreground-mute/40 pointer-events-none"
+        style={{ bottom: `${(avg / 100) * 100}%` }}
+      >
+        <span className="absolute -top-4 right-0 mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">
+          AVG {avg}
+        </span>
+      </div>
+      {data.map((d, i) => {
+        const h = (d.score / 100) * 100;
+        const color = scoreColor(d.score);
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+            <div className="relative w-full flex-1 flex items-end">
+              <div className="absolute -top-5 left-1/2 -translate-x-1/2 mono text-[10px] num opacity-0 group-hover:opacity-100 transition-opacity">
+                {d.score}
+              </div>
+              <div
+                className="w-full transition-all"
+                style={{
+                  height: `${h}%`,
+                  background: `linear-gradient(180deg, ${color}, ${color.replace(/\)$/, " / 0.4)")})`,
+                  boxShadow: `0 0 12px ${color.replace(/\)$/, " / 0.4)")}`,
+                }}
+              />
+            </div>
+            <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+            <div className="mono text-[10px] num text-foreground-dim">{d.hours}h</div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const SleepMonthChart = ({ data, avg }: { data: number[]; avg: number }) => {
+  const w = 800;
+  const h = 200;
+  const pad = 8;
+  const step = (w - pad * 2) / (data.length - 1);
+  const yFor = (v: number) => h - pad - ((v - 40) / 60) * (h - pad * 2); // map 40–100 → height
+  const pts = data.map((v, i) => `${pad + i * step},${yFor(v)}`).join(" ");
+  const areaPts = `${pad},${h} ${pts} ${w - pad},${h}`;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full" style={{ height: 200 }}>
+        <defs>
+          <linearGradient id="month-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(220 70% 60%)" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="hsl(220 70% 60%)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* horizontal grid */}
+        {[60, 70, 80, 90].map((g) => (
+          <g key={g}>
+            <line x1={pad} x2={w - pad} y1={yFor(g)} y2={yFor(g)} stroke="hsl(var(--hairline))" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={w - pad} y={yFor(g) - 2} textAnchor="end" fontSize="8" fill="hsl(var(--foreground-mute))" fontFamily="monospace">{g}</text>
+          </g>
+        ))}
+        {/* avg line */}
+        <line x1={pad} x2={w - pad} y1={yFor(avg)} y2={yFor(avg)} stroke="hsl(var(--accent))" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.6" />
+        <polyline points={areaPts} fill="url(#month-fill)" />
+        <polyline points={pts} fill="none" stroke="hsl(220 70% 60%)" strokeWidth="1.2" strokeLinejoin="round" />
+        {data.map((v, i) => (
+          <circle key={i} cx={pad + i * step} cy={yFor(v)} r="1.6" fill={scoreColor(v)} />
+        ))}
+      </svg>
+      <div className="flex justify-between mt-2 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
+        <span>30d ago</span>
+        <span>15d</span>
+        <span>Today</span>
+      </div>
+    </div>
+  );
+};
+
+
 const HealthView = () => {
+  const [sleepOpen, setSleepOpen] = useState(false);
+  const [sleepRange, setSleepRange] = useState<"week" | "month">("week");
+
   const totalSleep = useMemo(() => {
     const s = health.sleep.stages;
     return s.deep + s.light + s.rem + s.awake;
   }, []);
 
   const stagePct = (mins: number) => (mins / totalSleep) * 100;
+
+  const weekAvg = Math.round(health.sleep.week.reduce((a, b) => a + b.score, 0) / health.sleep.week.length);
+  const monthAvg = Math.round(health.sleep.month.reduce((a, b) => a + b, 0) / health.sleep.month.length);
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -181,11 +287,15 @@ const HealthView = () => {
           </div>
         </Panel>
 
-        {/* Sleep score */}
-        <Panel className="lg:col-span-1">
+        {/* Sleep score — click to drill into trends */}
+        <Panel className={`lg:col-span-1 cursor-pointer transition-all ${sleepOpen ? "ring-1 ring-odin-accent/40" : "hover:border-hairline-strong"}`}>
+          <button onClick={() => setSleepOpen((o) => !o)} className="w-full text-left">
           <div className="flex items-center justify-between mb-6">
             <Label>Last Night</Label>
-            <Moon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
+            <div className="flex items-center gap-2">
+              <span className="mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">Trends</span>
+              <ChevronRight className={`w-3.5 h-3.5 text-foreground-mute transition-transform ${sleepOpen ? "rotate-90" : ""}`} strokeWidth={1.5} />
+            </div>
           </div>
           <div className="flex items-center gap-6">
             <div className="relative grid place-items-center">
@@ -234,6 +344,7 @@ const HealthView = () => {
               <div><span className="inline-block w-1.5 h-1.5 mr-1" style={{ background: "hsl(var(--foreground-mute))" }} />Awake {health.sleep.stages.awake}m</div>
             </div>
           </div>
+          </button>
         </Panel>
 
         {/* Heart rate live */}
@@ -260,6 +371,74 @@ const HealthView = () => {
           </div>
         </Panel>
       </div>
+
+      {/* ───────────────── SLEEP TRENDS DRILL-DOWN ───────────────── */}
+      {sleepOpen && (
+        <Panel className="relative animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Moon className="w-4 h-4 text-odin-accent" strokeWidth={1.5} />
+              <div>
+                <div className="text-[15px] font-medium tracking-[0.02em]">Sleep Trends</div>
+                <div className="label mt-1">
+                  {sleepRange === "week" ? "Last 7 nights" : "Last 30 nights"} · Avg {sleepRange === "week" ? weekAvg : monthAvg}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <TactileButton active={sleepRange === "week"} onClick={() => setSleepRange("week")}>Week</TactileButton>
+              <TactileButton active={sleepRange === "month"} onClick={() => setSleepRange("month")}>Month</TactileButton>
+              <button
+                onClick={() => setSleepOpen(false)}
+                className="ml-2 w-7 h-7 grid place-items-center border border-hairline-strong text-foreground-mute hover:text-foreground hover:border-odin-accent/50 transition-colors"
+                aria-label="Close trends"
+              >
+                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+
+          {sleepRange === "week" ? (
+            <SleepWeekChart data={health.sleep.week} avg={weekAvg} />
+          ) : (
+            <SleepMonthChart data={health.sleep.month} avg={monthAvg} />
+          )}
+
+          <Hairline className="my-5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {(() => {
+              const data = sleepRange === "week" ? health.sleep.week.map((d) => d.score) : health.sleep.month;
+              const avg = sleepRange === "week" ? weekAvg : monthAvg;
+              const best = Math.max(...data);
+              const worst = Math.min(...data);
+              const trend = data[data.length - 1] - data[0];
+              return (
+                <>
+                  <div>
+                    <Label>Average</Label>
+                    <div className="mono text-[24px] num mt-1.5 leading-none">{avg}</div>
+                  </div>
+                  <div>
+                    <Label>Best</Label>
+                    <div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none">{best}</div>
+                  </div>
+                  <div>
+                    <Label>Lowest</Label>
+                    <div className="mono text-[24px] num text-odin-alert mt-1.5 leading-none">{worst}</div>
+                  </div>
+                  <div>
+                    <Label>Trend</Label>
+                    <div className={`mono text-[24px] num mt-1.5 leading-none flex items-center gap-2 ${trend >= 0 ? "text-odin-ok" : "text-odin-alert"}`}>
+                      {trend >= 0 ? "+" : ""}{trend}
+                      {trend >= 0 ? <TrendingUp className="w-4 h-4" strokeWidth={1.5} /> : <TrendingDown className="w-4 h-4" strokeWidth={1.5} />}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </Panel>
+      )}
 
       {/* ───────────────── ACTIVITY RINGS ───────────────── */}
       <Panel>
