@@ -14,7 +14,7 @@ import { useGarmin } from "@/lib/garmin";
 /* history is wired in a follow-up.                                    */
 /* ------------------------------------------------------------------ */
 const mockHealth = {
-  device: { name: "Garmin fēnix 8", battery: 64, lastSync: "2 min ago" },
+  device: { name: "Chris's Garmin Venu 4", battery: 64, lastSync: "2 min ago" },
   bodyBattery: { current: 78, charged: 92, drained: 14 },
   sleep: {
     score: 86,
@@ -369,7 +369,7 @@ const HealthView = () => {
     return {
       ...m,
       device: {
-        name: live.connected ? "Garmin Connect · LIVE" : m.device.name,
+        name: "Chris's Garmin Venu 4",
         battery: has(live.device.battery) ? live.device.battery : m.device.battery,
         lastSync: live.connected ? live.lastSync : m.device.lastSync,
       },
