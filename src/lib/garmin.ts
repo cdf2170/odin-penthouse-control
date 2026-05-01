@@ -33,7 +33,7 @@ const hhmmFromIso = (iso?: string): string => {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" });
 };
 
 export interface GarminLive {

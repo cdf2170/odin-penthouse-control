@@ -119,7 +119,7 @@ const DiagnosticsView = () => {
               <li key={s.entity_id} className="flex items-center gap-3 text-[12px] py-1 border-b border-hairline/50">
                 <Radio className="w-3 h-3 text-foreground-mute shrink-0" strokeWidth={1.5} />
                 <span className="mono text-[10px] text-foreground-mute num shrink-0 w-12">
-                  {new Date(s.last_changed!).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })}
+                  {new Date(s.last_changed!).toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" })}
                 </span>
                 <span className="flex-1 truncate text-foreground-dim">{friendly(s)}</span>
                 <span className="mono text-[10px] text-odin-accent uppercase truncate max-w-[100px]">{s.state}</span>

@@ -1187,7 +1187,7 @@ const Garage = () => {
   const open = garageCover.state === "open" || garageCover.state === "opening";
   const moving = garageCover.state === "opening" || garageCover.state === "closing";
   const last = garageCover.last_changed
-    ? new Date(garageCover.last_changed).toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, month: "short", day: "numeric" })
+    ? new Date(garageCover.last_changed).toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, month: "short", day: "numeric" })
     : "—";
 
   const toggle = () =>
@@ -1269,7 +1269,7 @@ const Doorbell = () => {
             <img src={src} alt="" className="w-full h-full object-cover opacity-90" />
             <div className="absolute inset-0 scanline pointer-events-none" />
             <div className="absolute top-3 left-3 mono text-[10px] text-white/80 num bg-black/40 px-1.5 py-0.5">
-              SNAPSHOT · {updated?.toLocaleTimeString("en-US", { hour12: false }) ?? "—"}
+              SNAPSHOT · {updated?.toLocaleTimeString("en-US", { hour12: true }) ?? "—"}
             </div>
           </>
         ) : (
@@ -1627,7 +1627,7 @@ const ActivityLog = () => {
         {recent.map((s) => (
           <li key={s.entity_id} className="flex gap-3 text-[12px]">
             <span className="mono text-foreground-mute num shrink-0">
-              {new Date(s.last_changed!).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })}
+              {new Date(s.last_changed!).toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" })}
             </span>
             <span className="text-foreground-dim truncate">
               {friendly(s)} → <span className="mono">{s.state}</span>
@@ -1717,7 +1717,7 @@ const GarageQuickCard = () => {
   const moving = garageCover.state === "opening" || garageCover.state === "closing";
   const last = garageCover.last_changed
     ? new Date(garageCover.last_changed).toLocaleString("en-US", {
-        hour: "2-digit", minute: "2-digit", hour12: false, month: "short", day: "numeric",
+        hour: "2-digit", minute: "2-digit", hour12: true, month: "short", day: "numeric",
       })
     : "—";
   const toggle = () =>

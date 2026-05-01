@@ -156,7 +156,7 @@ export default function SecurityView() {
                   <div className="flex items-baseline justify-between mb-1">
                     <span className="mono text-[11px] text-foreground-mute num">
                       {new Date(s.last_changed!).toLocaleTimeString("en-US", {
-                        hour12: false,
+                        hour12: true,
                       })}
                     </span>
                     <span className="mono text-[10px] text-foreground-mute uppercase">

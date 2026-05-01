@@ -56,7 +56,7 @@ const SnapshotImage = ({ entity }: { entity: HaState }) => {
       <div className="absolute inset-0 scanline pointer-events-none" />
       <div className="absolute top-3 left-3 mono text-[10px] text-white/80 num bg-black/50 px-1.5 py-0.5">
         SNAPSHOT ·{" "}
-        {updated?.toLocaleTimeString("en-US", { hour12: false }) ?? "—"}
+        {updated?.toLocaleTimeString("en-US", { hour12: true }) ?? "—"}
       </div>
     </>
   );

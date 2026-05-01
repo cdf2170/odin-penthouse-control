@@ -69,7 +69,7 @@ export default function LiveInspector() {
                 <td className="px-3 py-1.5 mono text-foreground-mute num">
                   {s.last_updated
                     ? new Date(s.last_updated).toLocaleTimeString("en-US", {
-                        hour12: false,
+                        hour12: true,
                       })
                     : "—"}
                 </td>
