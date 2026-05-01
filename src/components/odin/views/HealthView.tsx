@@ -149,7 +149,91 @@ const ProgressBar = ({ value, max, color = "hsl(var(--accent))" }: { value: numb
 
 /* ------------------------------------------------------------------ */
 /* View                                                                */
-/* ------------------------------------------------------------------ */
+/* Sleep trend charts ------------------------------------------------ */
+const scoreColor = (s: number) =>
+  s >= 80 ? "hsl(152 50% 50%)" : s >= 70 ? "hsl(220 70% 60%)" : s >= 60 ? "hsl(48 80% 55%)" : "hsl(var(--alert))";
+
+const SleepWeekChart = ({ data, avg }: { data: { day: string; score: number; hours: number }[]; avg: number }) => (
+  <div>
+    <div className="relative flex items-end gap-3 h-48 px-2">
+      {/* avg line */}
+      <div
+        className="absolute left-2 right-2 border-t border-dashed border-foreground-mute/40 pointer-events-none"
+        style={{ bottom: `${(avg / 100) * 100}%` }}
+      >
+        <span className="absolute -top-4 right-0 mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">
+          AVG {avg}
+        </span>
+      </div>
+      {data.map((d, i) => {
+        const h = (d.score / 100) * 100;
+        const color = scoreColor(d.score);
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+            <div className="relative w-full flex-1 flex items-end">
+              <div className="absolute -top-5 left-1/2 -translate-x-1/2 mono text-[10px] num opacity-0 group-hover:opacity-100 transition-opacity">
+                {d.score}
+              </div>
+              <div
+                className="w-full transition-all"
+                style={{
+                  height: `${h}%`,
+                  background: `linear-gradient(180deg, ${color}, ${color.replace(/\)$/, " / 0.4)")})`,
+                  boxShadow: `0 0 12px ${color.replace(/\)$/, " / 0.4)")}`,
+                }}
+              />
+            </div>
+            <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+            <div className="mono text-[10px] num text-foreground-dim">{d.hours}h</div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const SleepMonthChart = ({ data, avg }: { data: number[]; avg: number }) => {
+  const w = 800;
+  const h = 200;
+  const pad = 8;
+  const step = (w - pad * 2) / (data.length - 1);
+  const yFor = (v: number) => h - pad - ((v - 40) / 60) * (h - pad * 2); // map 40–100 → height
+  const pts = data.map((v, i) => `${pad + i * step},${yFor(v)}`).join(" ");
+  const areaPts = `${pad},${h} ${pts} ${w - pad},${h}`;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full" style={{ height: 200 }}>
+        <defs>
+          <linearGradient id="month-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(220 70% 60%)" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="hsl(220 70% 60%)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* horizontal grid */}
+        {[60, 70, 80, 90].map((g) => (
+          <g key={g}>
+            <line x1={pad} x2={w - pad} y1={yFor(g)} y2={yFor(g)} stroke="hsl(var(--hairline))" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={w - pad} y={yFor(g) - 2} textAnchor="end" fontSize="8" fill="hsl(var(--foreground-mute))" fontFamily="monospace">{g}</text>
+          </g>
+        ))}
+        {/* avg line */}
+        <line x1={pad} x2={w - pad} y1={yFor(avg)} y2={yFor(avg)} stroke="hsl(var(--accent))" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.6" />
+        <polyline points={areaPts} fill="url(#month-fill)" />
+        <polyline points={pts} fill="none" stroke="hsl(220 70% 60%)" strokeWidth="1.2" strokeLinejoin="round" />
+        {data.map((v, i) => (
+          <circle key={i} cx={pad + i * step} cy={yFor(v)} r="1.6" fill={scoreColor(v)} />
+        ))}
+      </svg>
+      <div className="flex justify-between mt-2 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
+        <span>30d ago</span>
+        <span>15d</span>
+        <span>Today</span>
+      </div>
+    </div>
+  );
+};
+
+
 const HealthView = () => {
   const [sleepOpen, setSleepOpen] = useState(false);
   const [sleepRange, setSleepRange] = useState<"week" | "month">("week");
