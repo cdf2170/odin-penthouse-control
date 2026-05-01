@@ -360,10 +360,70 @@ const HealthView = () => {
   const [hrOpen, setHrOpen] = useState(false);
   const [hrRange, setHrRange] = useState<"week" | "month">("week");
 
+  // Live Garmin Connect data overlays the mock scaffold so charts/trends
+  // (which still need HA recorder history) keep rendering.
+  const live = useGarmin();
+  const health = useMemo(() => {
+    const m = mockHealth;
+    const has = (n: number) => Number.isFinite(n) && n > 0;
+    return {
+      ...m,
+      device: {
+        name: live.connected ? "Garmin Connect · LIVE" : m.device.name,
+        battery: has(live.device.battery) ? live.device.battery : m.device.battery,
+        lastSync: live.connected ? live.lastSync : m.device.lastSync,
+      },
+      bodyBattery: {
+        ...m.bodyBattery,
+        current: has(live.bodyBattery.current) ? live.bodyBattery.current : m.bodyBattery.current,
+      },
+      sleep: {
+        ...m.sleep,
+        score: has(live.sleep.score) ? live.sleep.score : m.sleep.score,
+        quality: live.sleep.quality !== "—" ? live.sleep.quality : m.sleep.quality,
+        duration: (live.sleep.duration.h || live.sleep.duration.m)
+          ? live.sleep.duration : m.sleep.duration,
+        stages: (live.sleep.stages.deep + live.sleep.stages.light + live.sleep.stages.rem) > 0
+          ? live.sleep.stages : m.sleep.stages,
+        bedtime: live.sleep.bedtime !== "—" ? live.sleep.bedtime : m.sleep.bedtime,
+        wake: live.sleep.wake !== "—" ? live.sleep.wake : m.sleep.wake,
+        restingHr: has(live.sleep.restingHr) ? live.sleep.restingHr : m.sleep.restingHr,
+      },
+      heart: {
+        ...m.heart,
+        current: has(live.heart.current) ? live.heart.current : m.heart.current,
+        resting: has(live.heart.resting) ? live.heart.resting : m.heart.resting,
+        max: has(live.heart.max) ? live.heart.max : m.heart.max,
+        avg24: has(live.heart.avg24) ? live.heart.avg24 : m.heart.avg24,
+      },
+      activity: {
+        ...m.activity,
+        steps: has(live.activity.steps) ? live.activity.steps : m.activity.steps,
+        calories: has(live.activity.calories) ? Math.round(live.activity.calories) : m.activity.calories,
+        distance: has(live.activity.distance) ? live.activity.distance : m.activity.distance,
+        intensityMin: has(live.activity.intensityMin) ? live.activity.intensityMin : m.activity.intensityMin,
+        floors: has(live.activity.floors) ? live.activity.floors : m.activity.floors,
+      },
+      stress: {
+        ...m.stress,
+        current: has(live.stress.current) ? live.stress.current : m.stress.current,
+        level: live.stress.level !== "—" ? live.stress.level : m.stress.level,
+      },
+      vo2max: has(live.vo2max) ? live.vo2max : m.vo2max,
+      trainingReadiness: has(live.trainingReadiness) ? live.trainingReadiness : m.trainingReadiness,
+      trainingStatus: live.trainingStatus !== "—" ? live.trainingStatus : m.trainingStatus,
+      profile: {
+        ...m.profile,
+        weight: has(live.weight) ? live.weight : m.profile.weight,
+        bodyFat: has(live.bodyFat) ? live.bodyFat : m.profile.bodyFat,
+      },
+    };
+  }, [live]);
+
   const totalSleep = useMemo(() => {
     const s = health.sleep.stages;
     return s.deep + s.light + s.rem + s.awake;
-  }, []);
+  }, [health.sleep.stages]);
 
   const stagePct = (mins: number) => (mins / totalSleep) * 100;
 
