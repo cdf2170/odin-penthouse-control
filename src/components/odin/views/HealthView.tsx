@@ -349,42 +349,6 @@ const HeartWeekChart = ({ data }: { data: { day: string; resting: number; avg: n
   );
 };
 
-  const yFor = (v: number) => h - pad - ((v - 40) / 60) * (h - pad * 2); // map 40–100 → height
-  const pts = data.map((v, i) => `${pad + i * step},${yFor(v)}`).join(" ");
-  const areaPts = `${pad},${h} ${pts} ${w - pad},${h}`;
-  return (
-    <div>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full" style={{ height: 200 }}>
-        <defs>
-          <linearGradient id="month-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(220 70% 60%)" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="hsl(220 70% 60%)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {/* horizontal grid */}
-        {[60, 70, 80, 90].map((g) => (
-          <g key={g}>
-            <line x1={pad} x2={w - pad} y1={yFor(g)} y2={yFor(g)} stroke="hsl(var(--hairline))" strokeWidth="0.5" strokeDasharray="2 3" />
-            <text x={w - pad} y={yFor(g) - 2} textAnchor="end" fontSize="8" fill="hsl(var(--foreground-mute))" fontFamily="monospace">{g}</text>
-          </g>
-        ))}
-        {/* avg line */}
-        <line x1={pad} x2={w - pad} y1={yFor(avg)} y2={yFor(avg)} stroke="hsl(var(--accent))" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.6" />
-        <polyline points={areaPts} fill="url(#month-fill)" />
-        <polyline points={pts} fill="none" stroke="hsl(220 70% 60%)" strokeWidth="1.2" strokeLinejoin="round" />
-        {data.map((v, i) => (
-          <circle key={i} cx={pad + i * step} cy={yFor(v)} r="1.6" fill={scoreColor(v)} />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-2 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
-        <span>30d ago</span>
-        <span>15d</span>
-        <span>Today</span>
-      </div>
-    </div>
-  );
-};
-
 
 const HealthView = () => {
   const [sleepOpen, setSleepOpen] = useState(false);
