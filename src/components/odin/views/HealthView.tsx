@@ -2,7 +2,8 @@
 import { useMemo, useState } from "react";
 import {
   Heart, Moon, Flame, Footprints, Activity, Droplet, Wind,
-  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain, ChevronRight, X
+  TrendingUp, TrendingDown, Watch, Zap, Gauge, Mountain, ChevronRight, X,
+  Battery, Apple, Beef, Wheat, Nut, User
 } from "lucide-react";
 import { Panel, Label, StatusDot, SectionHead, Hairline, TactileButton } from "@/components/odin/primitives";
 
@@ -76,6 +77,67 @@ const health = {
     { date: "Apr 29", type: "Run · 8.2 km", duration: "41m", load: 188 },
     { date: "Apr 28", type: "Yoga", duration: "32m", load: 28 },
   ],
+  // Body Battery week/month (0–100)
+  bodyBatteryTrend: {
+    week: [
+      { day: "Fri", high: 88, low: 22, end: 41 },
+      { day: "Sat", high: 94, low: 28, end: 55 },
+      { day: "Sun", high: 96, low: 35, end: 62 },
+      { day: "Mon", high: 84, low: 18, end: 36 },
+      { day: "Tue", high: 90, low: 24, end: 48 },
+      { day: "Wed", high: 92, low: 30, end: 58 },
+      { day: "Thu", high: 95, low: 32, end: 78 },
+    ],
+    month: [
+      62, 58, 71, 64, 55, 48, 66, 72, 68, 60,
+      74, 78, 70, 62, 54, 66, 75, 80, 76, 68,
+      60, 56, 72, 70, 82, 78, 80, 74, 79, 78,
+    ],
+  },
+  // Heart rate week/month (resting bpm)
+  heartTrend: {
+    week: [
+      { day: "Fri", resting: 56, avg: 74, max: 162 },
+      { day: "Sat", resting: 54, avg: 71, max: 178 },
+      { day: "Sun", resting: 53, avg: 68, max: 142 },
+      { day: "Mon", resting: 55, avg: 73, max: 155 },
+      { day: "Tue", resting: 52, avg: 70, max: 168 },
+      { day: "Wed", resting: 51, avg: 69, max: 148 },
+      { day: "Thu", resting: 52, avg: 71, max: 158 },
+    ],
+    month: [
+      58, 57, 56, 55, 56, 54, 55, 53, 54, 55,
+      54, 53, 52, 53, 54, 53, 52, 51, 52, 53,
+      52, 51, 52, 53, 52, 51, 52, 51, 52, 52,
+    ],
+  },
+  // Body profile drives macro goals
+  profile: {
+    name: "Brendan",
+    age: 32, sex: "M", height: 183, weight: 82, bodyFat: 16,
+    activity: "Active", goal: "Recomp",
+  },
+  nutrition: {
+    // Daily targets derived from profile (TDEE ~2,800 kcal, 1g protein/lb)
+    goals: { calories: 2800, protein: 180, carbs: 300, fat: 90, fiber: 38, water: 3.0 },
+    today:  { calories: 1842, protein: 132, carbs: 198, fat: 64, fiber: 22, water: 1.8 },
+    meals: [
+      { name: "Breakfast",  time: "07:24", kcal: 520, p: 38, c: 48, f: 18, items: "Greek yogurt · oats · blueberries · whey" },
+      { name: "Lunch",      time: "12:48", kcal: 680, p: 52, c: 72, f: 22, items: "Chicken bowl · jasmine rice · avocado" },
+      { name: "Snack",      time: "15:30", kcal: 240, p: 18, c: 28, f: 8,  items: "Protein bar · banana" },
+      { name: "Dinner",     time: "19:15", kcal: 402, p: 24, c: 50, f: 16, items: "Salmon · sweet potato · broccoli" },
+    ],
+    // 7-day calorie history vs goal
+    week: [
+      { day: "Fri", kcal: 2710 },
+      { day: "Sat", kcal: 3120 },
+      { day: "Sun", kcal: 2580 },
+      { day: "Mon", kcal: 2840 },
+      { day: "Tue", kcal: 2670 },
+      { day: "Wed", kcal: 2920 },
+      { day: "Thu", kcal: 1842 },
+    ],
+  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -193,42 +255,96 @@ const SleepWeekChart = ({ data, avg }: { data: { day: string; score: number; hou
 );
 
 const SleepMonthChart = ({ data, avg }: { data: number[]; avg: number }) => {
+  return <GenericLineChart data={data} avg={avg} domain={[40, 100]} color="hsl(220 70% 60%)" pointColor={scoreColor} />;
+};
+
+/* Generic line chart used for monthly trends */
+const GenericLineChart = ({
+  data, avg, domain = [0, 100], color = "hsl(var(--accent))", pointColor,
+}: { data: number[]; avg: number; domain?: [number, number]; color?: string; pointColor?: (v: number) => string }) => {
   const w = 800;
   const h = 200;
   const pad = 8;
+  const [lo, hi] = domain;
   const step = (w - pad * 2) / (data.length - 1);
-  const yFor = (v: number) => h - pad - ((v - 40) / 60) * (h - pad * 2); // map 40–100 → height
+  const yFor = (v: number) => h - pad - ((v - lo) / (hi - lo)) * (h - pad * 2);
   const pts = data.map((v, i) => `${pad + i * step},${yFor(v)}`).join(" ");
   const areaPts = `${pad},${h} ${pts} ${w - pad},${h}`;
+  const grids = [lo + (hi - lo) * 0.25, lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.75].map((v) => Math.round(v));
+  const gradId = `grad-${color.replace(/[^a-z0-9]/gi, "")}`;
   return (
     <div>
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full" style={{ height: 200 }}>
         <defs>
-          <linearGradient id="month-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(220 70% 60%)" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="hsl(220 70% 60%)" stopOpacity="0" />
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* horizontal grid */}
-        {[60, 70, 80, 90].map((g) => (
+        {grids.map((g) => (
           <g key={g}>
             <line x1={pad} x2={w - pad} y1={yFor(g)} y2={yFor(g)} stroke="hsl(var(--hairline))" strokeWidth="0.5" strokeDasharray="2 3" />
             <text x={w - pad} y={yFor(g) - 2} textAnchor="end" fontSize="8" fill="hsl(var(--foreground-mute))" fontFamily="monospace">{g}</text>
           </g>
         ))}
-        {/* avg line */}
         <line x1={pad} x2={w - pad} y1={yFor(avg)} y2={yFor(avg)} stroke="hsl(var(--accent))" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.6" />
-        <polyline points={areaPts} fill="url(#month-fill)" />
-        <polyline points={pts} fill="none" stroke="hsl(220 70% 60%)" strokeWidth="1.2" strokeLinejoin="round" />
+        <polyline points={areaPts} fill={`url(#${gradId})`} />
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="1.2" strokeLinejoin="round" />
         {data.map((v, i) => (
-          <circle key={i} cx={pad + i * step} cy={yFor(v)} r="1.6" fill={scoreColor(v)} />
+          <circle key={i} cx={pad + i * step} cy={yFor(v)} r="1.6" fill={pointColor ? pointColor(v) : color} />
         ))}
       </svg>
       <div className="flex justify-between mt-2 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
-        <span>30d ago</span>
-        <span>15d</span>
-        <span>Today</span>
+        <span>30d ago</span><span>15d</span><span>Today</span>
       </div>
+    </div>
+  );
+};
+
+/* Body Battery weekly bar (shows daily range) */
+const BodyBatteryWeekChart = ({ data, avg }: { data: { day: string; high: number; low: number; end: number }[]; avg: number }) => (
+  <div className="relative flex items-end gap-3 h-48 px-2">
+    <div className="absolute left-2 right-2 border-t border-dashed border-foreground-mute/40 pointer-events-none" style={{ bottom: `${avg}%` }}>
+      <span className="absolute -top-4 right-0 mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">AVG {avg}</span>
+    </div>
+    {data.map((d, i) => (
+      <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+        <div className="relative w-full flex-1 flex items-end">
+          <div className="absolute -top-5 left-1/2 -translate-x-1/2 mono text-[10px] num opacity-0 group-hover:opacity-100 transition-opacity">
+            {d.low}–{d.high}
+          </div>
+          <div
+            className="w-full transition-all rounded-sm"
+            style={{
+              height: `${d.high - d.low}%`,
+              marginBottom: `${d.low}%`,
+              background: "linear-gradient(180deg, hsl(152 60% 55% / 0.9), hsl(152 50% 35% / 0.5))",
+              boxShadow: "0 0 12px hsl(152 50% 50% / 0.4)",
+            }}
+          />
+        </div>
+        <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+        <div className="mono text-[10px] num text-foreground-dim">end {d.end}</div>
+      </div>
+    ))}
+  </div>
+);
+
+/* Heart rate weekly multi-bar (resting + avg) */
+const HeartWeekChart = ({ data }: { data: { day: string; resting: number; avg: number; max: number }[] }) => {
+  const max = Math.max(...data.map((d) => d.max));
+  return (
+    <div className="flex items-end gap-3 h-48 px-2">
+      {data.map((d, i) => (
+        <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+          <div className="relative w-full flex-1 flex items-end gap-0.5">
+            <div className="flex-1 transition-all" style={{ height: `${(d.resting / max) * 100}%`, background: "hsl(220 70% 60%)", boxShadow: "0 0 6px hsl(220 70% 60% / 0.4)" }} />
+            <div className="flex-1 transition-all" style={{ height: `${(d.avg / max) * 100}%`, background: "hsl(48 80% 55%)", boxShadow: "0 0 6px hsl(48 80% 55% / 0.4)" }} />
+            <div className="flex-1 transition-all" style={{ height: `${(d.max / max) * 100}%`, background: "hsl(var(--alert))", boxShadow: "0 0 6px hsl(var(--alert) / 0.5)" }} />
+          </div>
+          <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -237,6 +353,10 @@ const SleepMonthChart = ({ data, avg }: { data: number[]; avg: number }) => {
 const HealthView = () => {
   const [sleepOpen, setSleepOpen] = useState(false);
   const [sleepRange, setSleepRange] = useState<"week" | "month">("week");
+  const [bbOpen, setBbOpen] = useState(false);
+  const [bbRange, setBbRange] = useState<"week" | "month">("week");
+  const [hrOpen, setHrOpen] = useState(false);
+  const [hrRange, setHrRange] = useState<"week" | "month">("week");
 
   const totalSleep = useMemo(() => {
     const s = health.sleep.stages;
@@ -248,19 +368,33 @@ const HealthView = () => {
   const weekAvg = Math.round(health.sleep.week.reduce((a, b) => a + b.score, 0) / health.sleep.week.length);
   const monthAvg = Math.round(health.sleep.month.reduce((a, b) => a + b, 0) / health.sleep.month.length);
 
+  const bbWeekAvg = Math.round(health.bodyBatteryTrend.week.reduce((a, b) => a + b.end, 0) / 7);
+  const bbMonthAvg = Math.round(health.bodyBatteryTrend.month.reduce((a, b) => a + b, 0) / health.bodyBatteryTrend.month.length);
+  const hrMonthAvg = Math.round(health.heartTrend.month.reduce((a, b) => a + b, 0) / health.heartTrend.month.length);
+  const hrWeekRestAvg = Math.round(health.heartTrend.week.reduce((a, b) => a + b.resting, 0) / 7);
+
+  // Macros
+  const n = health.nutrition;
+  const macroPct = (cur: number, goal: number) => Math.min((cur / goal) * 100, 100);
+  // Macro calorie split (4/4/9)
+  const macroKcal = { p: n.today.protein * 4, c: n.today.carbs * 4, f: n.today.fat * 9 };
+  const macroKcalTotal = macroKcal.p + macroKcal.c + macroKcal.f || 1;
+
   return (
     <div className="space-y-6 max-w-[1400px]">
       {/* ───────────────── HERO ───────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Body Battery — signature panel */}
-        <Panel accent className="lg:col-span-1 relative overflow-hidden">
+        <Panel accent className={`lg:col-span-1 relative overflow-hidden cursor-pointer transition-all ${bbOpen ? "ring-1 ring-odin-accent/40" : ""}`}>
+          <button onClick={() => setBbOpen((o) => !o)} className="w-full text-left">
           <div className="absolute inset-0 opacity-30 pointer-events-none scanline" />
           <div className="relative">
             <div className="flex items-center justify-between mb-6">
               <Label>Body Battery</Label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <StatusDot state="active" />
                 <span className="mono text-[10px] text-foreground-mute">LIVE</span>
+                <ChevronRight className={`w-3.5 h-3.5 text-foreground-mute transition-transform ${bbOpen ? "rotate-90" : ""}`} strokeWidth={1.5} />
               </div>
             </div>
             <div className="flex items-center gap-6">
@@ -285,6 +419,7 @@ const HealthView = () => {
               </div>
             </div>
           </div>
+          </button>
         </Panel>
 
         {/* Sleep score — click to drill into trends */}
@@ -347,13 +482,15 @@ const HealthView = () => {
           </button>
         </Panel>
 
-        {/* Heart rate live */}
-        <Panel className="lg:col-span-1">
+        {/* Heart rate live — click for trends */}
+        <Panel className={`lg:col-span-1 cursor-pointer transition-all ${hrOpen ? "ring-1 ring-odin-accent/40" : "hover:border-hairline-strong"}`}>
+          <button onClick={() => setHrOpen((o) => !o)} className="w-full text-left">
           <div className="flex items-center justify-between mb-4">
             <Label>Heart Rate · 24h</Label>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Heart className="w-3.5 h-3.5 text-odin-alert" strokeWidth={1.5} fill="currentColor" />
               <span className="mono text-[10px] text-foreground-mute">BPM</span>
+              <ChevronRight className={`w-3.5 h-3.5 text-foreground-mute transition-transform ${hrOpen ? "rotate-90" : ""}`} strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -369,6 +506,7 @@ const HealthView = () => {
             <div><div className="label">Avg 24h</div><div className="mono num mt-1">{health.heart.avg24}</div></div>
             <div><div className="label">Max</div><div className="mono num mt-1">{health.heart.max}</div></div>
           </div>
+          </button>
         </Panel>
       </div>
 
@@ -436,6 +574,85 @@ const HealthView = () => {
                 </>
               );
             })()}
+          </div>
+        </Panel>
+      )}
+
+      {/* ───────────────── BODY BATTERY DRILL-DOWN ───────────────── */}
+      {bbOpen && (
+        <Panel className="relative animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Battery className="w-4 h-4 text-odin-accent" strokeWidth={1.5} />
+              <div>
+                <div className="text-[15px] font-medium tracking-[0.02em]">Body Battery Trends</div>
+                <div className="label mt-1">
+                  {bbRange === "week" ? "Last 7 days · daily range" : "Last 30 days · end-of-day"} · Avg {bbRange === "week" ? bbWeekAvg : bbMonthAvg}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <TactileButton active={bbRange === "week"} onClick={() => setBbRange("week")}>Week</TactileButton>
+              <TactileButton active={bbRange === "month"} onClick={() => setBbRange("month")}>Month</TactileButton>
+              <button onClick={() => setBbOpen(false)} className="ml-2 w-7 h-7 grid place-items-center border border-hairline-strong text-foreground-mute hover:text-foreground hover:border-odin-accent/50 transition-colors" aria-label="Close">
+                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+          {bbRange === "week" ? (
+            <BodyBatteryWeekChart data={health.bodyBatteryTrend.week} avg={bbWeekAvg} />
+          ) : (
+            <GenericLineChart data={health.bodyBatteryTrend.month} avg={bbMonthAvg} domain={[40, 100]} color="hsl(152 50% 50%)" />
+          )}
+          <Hairline className="my-5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div><Label>Avg End</Label><div className="mono text-[24px] num mt-1.5 leading-none">{bbRange === "week" ? bbWeekAvg : bbMonthAvg}</div></div>
+            <div><Label>Best Charge</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none">{bbRange === "week" ? Math.max(...health.bodyBatteryTrend.week.map(d => d.high)) : Math.max(...health.bodyBatteryTrend.month)}</div></div>
+            <div><Label>Lowest</Label><div className="mono text-[24px] num text-odin-alert mt-1.5 leading-none">{bbRange === "week" ? Math.min(...health.bodyBatteryTrend.week.map(d => d.low)) : Math.min(...health.bodyBatteryTrend.month)}</div></div>
+            <div><Label>Trend</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none flex items-center gap-2">+8<TrendingUp className="w-4 h-4" strokeWidth={1.5} /></div></div>
+          </div>
+        </Panel>
+      )}
+
+      {/* ───────────────── HEART RATE DRILL-DOWN ───────────────── */}
+      {hrOpen && (
+        <Panel className="relative animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Heart className="w-4 h-4 text-odin-alert" strokeWidth={1.5} fill="currentColor" />
+              <div>
+                <div className="text-[15px] font-medium tracking-[0.02em]">Heart Rate Trends</div>
+                <div className="label mt-1">
+                  {hrRange === "week" ? `Last 7 days · resting/avg/max · Avg rest ${hrWeekRestAvg}` : `Last 30 days · resting bpm · Avg ${hrMonthAvg}`}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <TactileButton active={hrRange === "week"} onClick={() => setHrRange("week")}>Week</TactileButton>
+              <TactileButton active={hrRange === "month"} onClick={() => setHrRange("month")}>Month</TactileButton>
+              <button onClick={() => setHrOpen(false)} className="ml-2 w-7 h-7 grid place-items-center border border-hairline-strong text-foreground-mute hover:text-foreground hover:border-odin-accent/50 transition-colors" aria-label="Close">
+                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+          {hrRange === "week" ? (
+            <>
+              <HeartWeekChart data={health.heartTrend.week} />
+              <div className="flex items-center gap-5 mt-4 text-[10px] uppercase tracking-[0.14em] text-foreground-mute">
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2" style={{ background: "hsl(220 70% 60%)" }} />Resting</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2" style={{ background: "hsl(48 80% 55%)" }} />Avg</div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2" style={{ background: "hsl(var(--alert))" }} />Max</div>
+              </div>
+            </>
+          ) : (
+            <GenericLineChart data={health.heartTrend.month} avg={hrMonthAvg} domain={[45, 65]} color="hsl(var(--alert))" />
+          )}
+          <Hairline className="my-5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div><Label>Resting Avg</Label><div className="mono text-[24px] num mt-1.5 leading-none">{hrRange === "week" ? hrWeekRestAvg : hrMonthAvg}</div></div>
+            <div><Label>Lowest Rest</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none">{hrRange === "week" ? Math.min(...health.heartTrend.week.map(d => d.resting)) : Math.min(...health.heartTrend.month)}</div></div>
+            <div><Label>Peak</Label><div className="mono text-[24px] num text-odin-alert mt-1.5 leading-none">{Math.max(...health.heartTrend.week.map(d => d.max))}</div></div>
+            <div><Label>HRV Trend</Label><div className="mono text-[24px] num text-odin-ok mt-1.5 leading-none flex items-center gap-2">+4<TrendingUp className="w-4 h-4" strokeWidth={1.5} /></div></div>
           </div>
         </Panel>
       )}
@@ -543,6 +760,196 @@ const HealthView = () => {
               </li>
             ))}
           </ul>
+        </Panel>
+      </div>
+
+      {/* ───────────────── NUTRITION ───────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Calorie ring + body profile */}
+        <Panel accent className="lg:col-span-1 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-30 pointer-events-none scanline" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-6">
+              <Label>Nutrition · Today</Label>
+              <div className="flex items-center gap-1.5">
+                <Apple className="w-3.5 h-3.5 text-odin-accent" strokeWidth={1.5} />
+                <span className="mono text-[10px] text-foreground-mute">KCAL</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="relative grid place-items-center">
+                <Ring value={n.today.calories} max={n.goals.calories} size={148} stroke={4} color="hsl(14 84% 58%)" />
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="text-center">
+                    <div className="mono text-[34px] num leading-none text-odin-glow">{n.today.calories.toLocaleString()}</div>
+                    <div className="label mt-1.5">of {n.goals.calories.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <Label>Remaining</Label>
+                  <div className="mono text-[18px] num text-odin-ok mt-1">{(n.goals.calories - n.today.calories).toLocaleString()}</div>
+                </div>
+                <div>
+                  <Label>Burned</Label>
+                  <div className="mono text-[18px] num mt-1">{health.activity.calories.toLocaleString()}</div>
+                </div>
+                <div>
+                  <Label>Net Balance</Label>
+                  <div className={`mono text-[14px] num mt-1 ${n.today.calories - health.activity.calories < 0 ? "text-odin-ok" : ""}`}>
+                    {n.today.calories - health.activity.calories > 0 ? "+" : ""}{n.today.calories - health.activity.calories} kcal
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Hairline className="my-4" />
+            <div className="flex items-center gap-2 text-[10px] text-foreground-mute mono uppercase tracking-[0.14em]">
+              <User className="w-3 h-3" strokeWidth={1.5} />
+              {health.profile.sex} · {health.profile.age}y · {health.profile.height}cm · {health.profile.weight}kg · {health.profile.bodyFat}% BF · {health.profile.goal}
+            </div>
+          </div>
+        </Panel>
+
+        {/* Macros */}
+        <Panel className="lg:col-span-2">
+          <SectionHead title="Macros" meta={`GOAL · ${health.profile.goal.toUpperCase()}`} />
+          {/* Stacked macro split bar */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2 text-[10px] text-foreground-mute mono uppercase tracking-[0.14em]">
+              <span>Calorie split</span>
+              <span>P {Math.round(macroKcal.p / macroKcalTotal * 100)}% · C {Math.round(macroKcal.c / macroKcalTotal * 100)}% · F {Math.round(macroKcal.f / macroKcalTotal * 100)}%</span>
+            </div>
+            <div className="flex h-2.5 w-full overflow-hidden">
+              <div style={{ width: `${(macroKcal.p / macroKcalTotal) * 100}%`, background: "hsl(14 84% 58%)", boxShadow: "0 0 8px hsl(14 84% 58% / 0.5)" }} />
+              <div style={{ width: `${(macroKcal.c / macroKcalTotal) * 100}%`, background: "hsl(48 80% 55%)", boxShadow: "0 0 8px hsl(48 80% 55% / 0.5)" }} />
+              <div style={{ width: `${(macroKcal.f / macroKcalTotal) * 100}%`, background: "hsl(280 60% 60%)", boxShadow: "0 0 8px hsl(280 60% 60% / 0.5)" }} />
+            </div>
+          </div>
+
+          {/* Per-macro progress */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { key: "Protein", icon: Beef, cur: n.today.protein, goal: n.goals.protein, color: "hsl(14 84% 58%)", unit: "g" },
+              { key: "Carbs",   icon: Wheat, cur: n.today.carbs,   goal: n.goals.carbs,   color: "hsl(48 80% 55%)", unit: "g" },
+              { key: "Fat",     icon: Nut,   cur: n.today.fat,     goal: n.goals.fat,     color: "hsl(280 60% 60%)", unit: "g" },
+            ].map((m) => (
+              <div key={m.key}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <m.icon className="w-3.5 h-3.5" strokeWidth={1.5} style={{ color: m.color }} />
+                    <Label>{m.key}</Label>
+                  </div>
+                  <span className="mono text-[10px] num text-foreground-mute">{Math.round(macroPct(m.cur, m.goal))}%</span>
+                </div>
+                <div className="flex items-baseline gap-1.5 mb-2">
+                  <span className="mono text-[22px] num leading-none">{m.cur}</span>
+                  <span className="text-[11px] text-foreground-mute mono">/ {m.goal}{m.unit}</span>
+                </div>
+                <div className="h-1.5 w-full bg-surface-inset overflow-hidden">
+                  <div className="h-full transition-all" style={{ width: `${macroPct(m.cur, m.goal)}%`, background: m.color, boxShadow: `0 0 6px ${m.color}` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Hairline className="my-5" />
+
+          {/* Secondary nutrients */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            <div>
+              <Label>Fiber</Label>
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="mono text-[18px] num leading-none">{n.today.fiber}</span>
+                <span className="text-[10px] text-foreground-mute mono">/ {n.goals.fiber}g</span>
+              </div>
+              <div className="mt-2"><ProgressBar value={n.today.fiber} max={n.goals.fiber} color="hsl(152 50% 50%)" /></div>
+            </div>
+            <div>
+              <Label>Water</Label>
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="mono text-[18px] num leading-none">{n.today.water}L</span>
+                <span className="text-[10px] text-foreground-mute mono">/ {n.goals.water}L</span>
+              </div>
+              <div className="mt-2"><ProgressBar value={n.today.water} max={n.goals.water} color="hsl(200 80% 55%)" /></div>
+            </div>
+            <div>
+              <Label>P / kg bw</Label>
+              <div className="mono text-[18px] num leading-none mt-1.5">
+                {(n.today.protein / health.profile.weight).toFixed(2)}<span className="text-foreground-mute text-[11px]"> g/kg</span>
+              </div>
+              <div className="text-[9px] text-foreground-mute mt-2 mono uppercase tracking-[0.14em]">Target ≥ 2.0</div>
+            </div>
+            <div>
+              <Label>7-day Avg</Label>
+              <div className="mono text-[18px] num leading-none mt-1.5">
+                {Math.round(n.week.reduce((a, b) => a + b.kcal, 0) / n.week.length).toLocaleString()}
+                <span className="text-foreground-mute text-[11px]"> kcal</span>
+              </div>
+              <div className="text-[9px] text-foreground-mute mt-2 mono uppercase tracking-[0.14em]">vs goal {n.goals.calories.toLocaleString()}</div>
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      {/* Meals + weekly calories */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Panel>
+          <SectionHead title="Meals · Today" meta={`${n.meals.length} LOGGED`} />
+          <ul className="divide-y divide-hairline">
+            {n.meals.map((m) => (
+              <li key={m.name} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 grid place-items-center border border-hairline-strong shrink-0">
+                    <Apple className="w-3.5 h-3.5 text-odin-accent" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[13px]">{m.name}</span>
+                      <span className="text-[10px] text-foreground-mute mono uppercase tracking-[0.14em]">{m.time}</span>
+                    </div>
+                    <div className="text-[11px] text-foreground-dim mt-0.5 truncate">{m.items}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="mono text-[16px] num leading-none">{m.kcal}</div>
+                    <div className="label mt-1 text-[9px]">kcal</div>
+                  </div>
+                </div>
+                {/* Per-meal macro mini bar */}
+                <div className="flex h-1 w-full overflow-hidden mt-2 ml-12">
+                  <div style={{ width: `${(m.p * 4 / m.kcal) * 100}%`, background: "hsl(14 84% 58%)" }} />
+                  <div style={{ width: `${(m.c * 4 / m.kcal) * 100}%`, background: "hsl(48 80% 55%)" }} />
+                  <div style={{ width: `${(m.f * 9 / m.kcal) * 100}%`, background: "hsl(280 60% 60%)" }} />
+                </div>
+                <div className="flex gap-4 mt-1.5 ml-12 text-[9px] text-foreground-mute mono uppercase tracking-[0.14em]">
+                  <span>P {m.p}g</span><span>C {m.c}g</span><span>F {m.f}g</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel>
+          <SectionHead title="Calorie Trend · 7 Days" meta={`GOAL ${n.goals.calories.toLocaleString()}`} />
+          <div className="relative flex items-end gap-3 h-48 px-2">
+            <div className="absolute left-2 right-2 border-t border-dashed border-foreground-mute/40 pointer-events-none" style={{ bottom: `${(n.goals.calories / 3500) * 100}%` }}>
+              <span className="absolute -top-4 right-0 mono text-[9px] text-foreground-mute uppercase tracking-[0.14em]">GOAL</span>
+            </div>
+            {n.week.map((d, i) => {
+              const h = (d.kcal / 3500) * 100;
+              const over = d.kcal > n.goals.calories;
+              const color = over ? "hsl(var(--alert))" : "hsl(14 84% 58%)";
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                  <div className="relative w-full flex-1 flex items-end">
+                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 mono text-[10px] num opacity-0 group-hover:opacity-100 transition-opacity">{d.kcal}</div>
+                    <div className="w-full transition-all" style={{ height: `${h}%`, background: `linear-gradient(180deg, ${color}, ${color.replace(/\)$/, " / 0.4)")})`, boxShadow: `0 0 12px ${color.replace(/\)$/, " / 0.4)")}` }} />
+                  </div>
+                  <div className="text-[10px] text-foreground-mute uppercase tracking-[0.14em]">{d.day}</div>
+                </div>
+              );
+            })}
+          </div>
         </Panel>
       </div>
 
