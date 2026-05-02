@@ -1218,6 +1218,28 @@ const NowPlaying = () => {
               <button onClick={() => remote("HOME")} className="px-2.5 h-8 grid place-items-center btn-tactile text-[10px] tracking-[0.15em]"><Home className="w-3.5 h-3.5 mr-1" strokeWidth={1.5} />HOME</button>
             </div>
           </div>
+
+          {/* App launchers */}
+          <div className="mt-4 pt-4 border-t border-hairline/60">
+            <div className="label mb-2">Apps</div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {APP_LAUNCHERS.map((app) => {
+                const active = appName === app.name;
+                return (
+                  <button
+                    key={app.pkg}
+                    onClick={() => launchApp(app.pkg)}
+                    className={`text-[11px] px-2 py-1.5 border border-hairline-strong/60 hover:border-odin-accent text-center truncate transition-colors ${
+                      active ? "bg-surface-raised text-foreground border-odin-accent" : "text-foreground-dim"
+                    }`}
+                    title={`Launch ${app.name}`}
+                  >
+                    {app.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
     </Panel>
