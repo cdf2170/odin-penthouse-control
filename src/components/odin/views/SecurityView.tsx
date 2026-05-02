@@ -311,14 +311,14 @@ const SecurityHero = ({
               key={p.id}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 border transition-colors shrink-0 ${
                 p.active
-                  ? "border-odin-accent/70 text-odin-accent"
+                  ? "border-odin-info/70 text-odin-info"
                   : "border-hairline text-foreground-mute"
               }`}
-              style={p.active ? { boxShadow: "0 0 12px hsl(var(--accent) / 0.18) inset" } : undefined}
+              style={p.active ? { boxShadow: "0 0 12px hsl(var(--info) / 0.18) inset" } : undefined}
             >
               <p.icon className="w-3 h-3" strokeWidth={1.5} />
               <span className="mono text-[10px] uppercase tracking-[0.16em]">{p.label}</span>
-              <StatusDot state={p.active ? "active" : "idle"} />
+              <StatusDot state={p.active ? "info" : "idle"} />
             </div>
           ))}
         </div>
