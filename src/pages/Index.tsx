@@ -1130,9 +1130,14 @@ const Security = () => {
   const doorsOnly = doorSensors.filter(
     (s) => s.attributes?.device_class === "door" || /door/i.test(friendly(s)),
   );
-  const exterior = doorsOnly.filter(
-    (s) => EXTERIOR_IDS.has(s.entity_id) || /garage/i.test(friendly(s)),
-  );
+  const exteriorOrder = (s: { entity_id: string }) => {
+    if (s.entity_id === "binary_sensor.front_door_sensor") return 0;
+    if (s.entity_id === "binary_sensor.back_door_sensor") return 1;
+    return 2; // garage and any other exterior
+  };
+  const exterior = doorsOnly
+    .filter((s) => EXTERIOR_IDS.has(s.entity_id) || /garage/i.test(friendly(s)))
+    .sort((a, b) => exteriorOrder(a) - exteriorOrder(b));
   const interior = doorsOnly.filter(
     (s) => !EXTERIOR_IDS.has(s.entity_id) && !/garage/i.test(friendly(s)),
   );
