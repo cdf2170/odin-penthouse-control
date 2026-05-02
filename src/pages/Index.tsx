@@ -1123,7 +1123,9 @@ const Security = () => {
   const { alarm, doorSensors, motionSensors } = useDiscovery();
   const armState = alarm?.state ?? "unknown";
   const armed = armState.startsWith("armed");
-  const all = [...doorSensors, ...motionSensors].slice(0, 6);
+  const all = [...doorSensors, ...motionSensors]
+    .filter((s) => s.entity_id !== "binary_sensor.hallway_motion_sensor")
+    .slice(0, 6);
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
