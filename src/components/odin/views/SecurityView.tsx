@@ -217,10 +217,139 @@ const GarageCard = ({ cover }: { cover?: HaState }) => {
   );
 };
 
+/* ---------- Hero: command-center posture -------------------------- */
+type Posture = {
+  level: "secured" | "attention" | "breach";
+  headline: string;
+  detail: string;
+};
+
+const PERIMETER_AI = [
+  { id: "binary_sensor.front_door_person",  label: "Person",  icon: UserRound },
+  { id: "binary_sensor.front_door_vehicle", label: "Vehicle", icon: Car },
+  { id: "binary_sensor.front_door_pet",     label: "Pet",     icon: PawPrint },
+  { id: "binary_sensor.front_door_visitor", label: "Visitor", icon: Bell },
+  { id: "binary_sensor.front_door_motion",  label: "Motion",  icon: Radio },
+];
+
+const SecurityHero = ({
+  posture,
+  occupiedCount,
+  liveCount,
+  openDoors,
+  perimeter,
+  doorbellOnline,
+  sirenReady,
+}: {
+  posture: Posture;
+  occupiedCount: number;
+  liveCount: number;
+  openDoors: number;
+  perimeter: { id: string; label: string; icon: any; active: boolean }[];
+  doorbellOnline: boolean;
+  sirenReady: boolean;
+}) => {
+  const tone =
+    posture.level === "breach"
+      ? { ring: "border-odin-alert/60", glow: "0 0 60px hsl(var(--alert) / 0.18) inset", text: "text-odin-alert", Icon: ShieldAlert, dot: "alert" as const }
+      : posture.level === "attention"
+        ? { ring: "border-odin-accent/60", glow: "0 0 60px hsl(var(--accent) / 0.16) inset", text: "text-odin-accent", Icon: Shield, dot: "active" as const }
+        : { ring: "border-hairline-strong", glow: "0 0 60px hsl(152 50% 50% / 0.12) inset", text: "text-odin-ok", Icon: ShieldCheck, dot: "ok" as const };
+
+  return (
+    <Panel padding="p-0" className={`overflow-hidden border ${tone.ring}`}>
+      {/* Top — posture */}
+      <div
+        className="px-8 py-7 flex items-center gap-8"
+        style={{
+          background:
+            "linear-gradient(135deg, hsl(var(--surface-raised)) 0%, hsl(var(--background)) 100%)",
+          boxShadow: tone.glow,
+        }}
+      >
+        <div
+          className={`w-16 h-16 grid place-items-center border ${tone.ring} shrink-0`}
+          style={{ boxShadow: tone.glow }}
+        >
+          <tone.Icon className={`w-7 h-7 ${tone.text}`} strokeWidth={1.25} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="mono text-[10px] uppercase tracking-[0.3em] text-foreground-mute">
+            Property Posture
+          </div>
+          <div className={`text-[34px] font-light tracking-[-0.01em] mt-2 leading-none ${tone.text}`}>
+            {posture.headline}
+          </div>
+          <div className="text-[12px] text-foreground-dim mt-2">
+            {posture.detail}
+          </div>
+        </div>
+
+        {/* Quick metrics */}
+        <div className="hidden md:flex items-stretch gap-6 pl-6 border-l border-hairline">
+          <Metric value={occupiedCount} label="Occupied" sub={`of ${liveCount}`} />
+          <Metric value={openDoors} label="Open" sub="openings" alert={openDoors > 0} />
+        </div>
+      </div>
+
+      {/* Bottom — live perimeter intelligence strip */}
+      <div className="border-t border-hairline grid grid-cols-2 lg:grid-cols-[1fr_auto] divide-x divide-hairline">
+        <div className="px-6 py-4 flex items-center gap-2 overflow-x-auto">
+          <Label className="shrink-0 mr-2">Perimeter AI</Label>
+          {perimeter.map((p) => (
+            <div
+              key={p.id}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 border transition-colors shrink-0 ${
+                p.active
+                  ? "border-odin-accent/70 text-odin-accent"
+                  : "border-hairline text-foreground-mute"
+              }`}
+              style={p.active ? { boxShadow: "0 0 12px hsl(var(--accent) / 0.18) inset" } : undefined}
+            >
+              <p.icon className="w-3 h-3" strokeWidth={1.5} />
+              <span className="mono text-[10px] uppercase tracking-[0.16em]">{p.label}</span>
+              <StatusDot state={p.active ? "active" : "idle"} />
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 flex items-center gap-5">
+          <div className="flex items-center gap-2">
+            <Eye className={`w-3.5 h-3.5 ${doorbellOnline ? "text-odin-ok" : "text-foreground-mute"}`} strokeWidth={1.5} />
+            <span className="mono text-[10px] uppercase tracking-[0.16em] text-foreground-dim">
+              Doorbell {doorbellOnline ? "Live" : "Offline"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Siren className={`w-3.5 h-3.5 ${sirenReady ? "text-odin-ok" : "text-foreground-mute"}`} strokeWidth={1.5} />
+            <span className="mono text-[10px] uppercase tracking-[0.16em] text-foreground-dim">
+              Siren {sirenReady ? "Armed" : "—"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+};
+
+const Metric = ({
+  value, label, sub, alert,
+}: { value: number; label: string; sub?: string; alert?: boolean }) => (
+  <div className="text-right">
+    <div className={`mono text-[28px] num leading-none ${alert ? "text-odin-alert" : ""}`}>
+      {value}
+    </div>
+    <div className="mono text-[9px] uppercase tracking-[0.22em] text-foreground-mute mt-2">
+      {label}
+    </div>
+    {sub && (
+      <div className="mono text-[9px] text-foreground-mute num mt-0.5">{sub}</div>
+    )}
+  </div>
+);
+
 /* ---------- View -------------------------------------------------- */
 export default function SecurityView() {
   const { states } = useHa();
-  const { garageCover } = useDiscovery();
 
   const cards = useMemo(
     () =>
@@ -233,27 +362,62 @@ export default function SecurityView() {
   );
 
   const liveCount = cards.filter((c) => c.binding.status === "live").length;
-  const occupiedCount = cards.filter(
-    (c) => c.presence?.state === "on",
-  ).length;
+  const occupiedCount = cards.filter((c) => c.presence?.state === "on").length;
   const openDoors = cards.filter((c) => c.door?.state === "on").length;
+
+  // Perimeter AI
+  const perimeter = PERIMETER_AI.map((p) => ({
+    ...p,
+    active: states[p.id]?.state === "on",
+  }));
+  const perimeterAlert = perimeter.some(
+    (p) => p.active && (p.label === "Person" || p.label === "Visitor" || p.label === "Vehicle"),
+  );
+
+  const doorbell = states["camera.front_door_fluent"];
+  const doorbellOnline = !!doorbell && doorbell.state !== "unavailable";
+  const siren = states["siren.front_door_siren"];
+  const sirenReady = !!siren && siren.state !== "unavailable";
+
+  // Recent events — last 5 changes across door + presence sensors
+  const recent = useMemo(() => {
+    const all = cards
+      .flatMap((c) => [c.door, c.presence].filter(Boolean) as HaState[])
+      .filter((s) => s.last_changed)
+      .sort((a, b) => new Date(b.last_changed!).getTime() - new Date(a.last_changed!).getTime())
+      .slice(0, 5);
+    return all;
+  }, [cards]);
+
+  const posture: Posture = openDoors > 0
+    ? {
+        level: "attention",
+        headline: "Attention",
+        detail: `${openDoors} opening${openDoors === 1 ? "" : "s"} unsecured · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied`,
+      }
+    : perimeterAlert
+      ? {
+          level: "attention",
+          headline: "Visitor Detected",
+          detail: "Perimeter AI flagged activity at front door",
+        }
+      : {
+          level: "secured",
+          headline: "All Clear",
+          detail: `Property secured · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied · perimeter quiet`,
+        };
 
   return (
     <div className="space-y-6">
-      <Panel accent>
-        <div className="flex items-start justify-between">
-          <div>
-            <Label>Security · Presence</Label>
-            <div className="text-[20px] font-medium mt-2 tracking-[0.04em]">
-              {occupiedCount} occupied · {openDoors} door{openDoors === 1 ? "" : "s"} open
-            </div>
-            <div className="text-[12px] text-foreground-dim mt-1">
-              {liveCount} live room{liveCount === 1 ? "" : "s"} · live via Home Assistant
-            </div>
-          </div>
-          <Clock className="w-4 h-4 text-foreground-mute" strokeWidth={1.5} />
-        </div>
-      </Panel>
+      <SecurityHero
+        posture={posture}
+        occupiedCount={occupiedCount}
+        liveCount={liveCount}
+        openDoors={openDoors}
+        perimeter={perimeter}
+        doorbellOnline={doorbellOnline}
+        sirenReady={sirenReady}
+      />
 
       <div>
         <SectionHead title="Rooms" meta={`${ROOMS.length} TOTAL`} />
@@ -269,6 +433,38 @@ export default function SecurityView() {
         </div>
       </div>
 
+      {recent.length > 0 && (
+        <Panel>
+          <SectionHead title="Recent Activity" meta="LIVE" />
+          <ul className="divide-y divide-hairline/60">
+            {recent.map((s) => {
+              const open = s.state === "on";
+              const isMotion =
+                s.attributes?.device_class === "motion" ||
+                s.attributes?.device_class === "occupancy" ||
+                s.attributes?.device_class === "presence";
+              return (
+                <li key={s.entity_id} className="flex items-center gap-3 py-2.5">
+                  <StatusDot state={open ? (isMotion ? "active" : "alert") : "ok"} />
+                  <span className="text-[12px] flex-1 truncate text-foreground-dim">
+                    {friendly(s)}
+                  </span>
+                  <span className="mono text-[10px] uppercase tracking-[0.14em] text-foreground-mute w-20 text-right">
+                    {isMotion ? (open ? "Active" : "Clear") : open ? "Opened" : "Closed"}
+                  </span>
+                  <span className="mono text-[10px] text-foreground-mute num w-20 text-right">
+                    {new Date(s.last_changed!).toLocaleTimeString("en-US", {
+                      hour12: true,
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      )}
     </div>
   );
 }
