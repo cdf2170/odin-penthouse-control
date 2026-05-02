@@ -1123,7 +1123,9 @@ const Security = () => {
   const { alarm, doorSensors, motionSensors } = useDiscovery();
   const armState = alarm?.state ?? "unknown";
   const armed = armState.startsWith("armed");
-  const all = [...doorSensors, ...motionSensors].slice(0, 6);
+  const all = [...doorSensors, ...motionSensors]
+    .filter((s) => s.entity_id !== "binary_sensor.hallway_motion_sensor")
+    .slice(0, 6);
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
@@ -1184,6 +1186,14 @@ const Security = () => {
               </div>
             );
           })}
+          <div className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60 opacity-60">
+            <DoorClosed className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+            <span className="text-[12px] flex-1 min-w-0 truncate">Back Door</span>
+            <StatusDot state="idle" />
+            <span className="mono text-[10px] text-foreground-mute w-16 text-right shrink-0">
+              SOON
+            </span>
+          </div>
         </div>
       )}
     </Panel>
