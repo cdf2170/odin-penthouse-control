@@ -925,6 +925,29 @@ const NowPlaying = () => {
     mediaPlayers.find((m) => m.state === "playing") ??
     mediaPlayers[0];
 
+  // Android Debug Bridge media_player provides richer metadata (active app, title,
+  // artist, position, artwork) than the Sony TV remote-driven media_player.
+  // Discover any media_player exposed by the ADB integration in the same area.
+  const adb = useMemo(() => {
+    const candidates = Object.values(states).filter(
+      (s) =>
+        s.entity_id.startsWith("media_player.") &&
+        (/android[_ ]?tv/i.test(s.entity_id) ||
+          /android[_ ]?tv/i.test((s.attributes?.friendly_name as string) ?? "") ||
+          /androidtv/i.test((s.attributes?.integration as string) ?? "")),
+    );
+    // Prefer one that's actively reporting media or app info.
+    return (
+      candidates.find(
+        (s) =>
+          s.attributes?.media_title ||
+          s.attributes?.app_name ||
+          s.attributes?.app_id ||
+          s.state === "playing",
+      ) ?? candidates[0]
+    );
+  }, [states]);
+
   if (!playing) {
     return (
       <Panel>
@@ -934,14 +957,34 @@ const NowPlaying = () => {
     );
   }
 
-  const a = playing.attributes ?? {};
-  const vol = Math.round(((a.volume_level as number) ?? 0) * 100);
-  const muted = (a.is_volume_muted as boolean) ?? false;
-  const isPlaying = playing.state === "playing";
-  const isOff = playing.state === "off" || playing.state === "standby" || playing.state === "unavailable";
-  const isTv = playing.entity_id === TV_ENTITY_ID || (a.device_class as string) === "tv";
-  const sources = (a.source_list as string[] | undefined) ?? [];
-  const currentSource = (a.source as string | undefined) ?? (a.app_name as string | undefined);
+  const baseA = playing.attributes ?? {};
+  const adbA = adb?.attributes ?? {};
+  // Merge: ADB attributes win where present, falling back to the primary entity.
+  const pick = <T,>(key: string): T | undefined =>
+    (adbA[key] ?? baseA[key]) as T | undefined;
+  const a: Record<string, any> = { ...baseA, ...adbA };
+
+  const vol = Math.round((((pick<number>("volume_level")) ?? 0) as number) * 100);
+  const muted = (pick<boolean>("is_volume_muted")) ?? false;
+  // Playback state: prefer ADB (more accurate for active app), fall back to primary.
+  const effectiveState =
+    adb && (adb.state === "playing" || adb.state === "paused")
+      ? adb.state
+      : playing.state;
+  const isPlaying = effectiveState === "playing";
+  const isOff =
+    playing.state === "off" ||
+    playing.state === "standby" ||
+    playing.state === "unavailable";
+  const isTv =
+    playing.entity_id === TV_ENTITY_ID ||
+    (baseA.device_class as string) === "tv" ||
+    !!adb;
+  const sources = (baseA.source_list as string[] | undefined) ?? [];
+  const currentSource =
+    (pick<string>("app_name")) ??
+    (pick<string>("source")) ??
+    (pick<string>("app_id"));
   const supportedFeatures = (a.supported_features as number) ?? 0;
   // Bitmask helpers (HA media_player feature flags)
   const SUPPORT_PAUSE = 1, SUPPORT_PLAY = 16384, SUPPORT_STOP = 4096,
