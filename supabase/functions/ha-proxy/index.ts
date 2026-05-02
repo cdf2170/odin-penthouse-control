@@ -32,53 +32,57 @@ Deno.serve(async (req) => {
       return json({ error: "HA credentials not configured" }, 500);
     }
 
-    // Verify caller is authenticated
+    const base = HA_BASE_URL.replace(/\/$/, "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey =
+      Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+
+    // GET MJPEG stream proxy: ?entity_id=camera.x&token=<supabase_jwt>
+    // Token must be in URL because <img> tags can't send Authorization headers.
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      const entityId = url.searchParams.get("entity_id");
+      const token = url.searchParams.get("token");
+      if (!entityId || !token) {
+        return json({ error: "entity_id and token required" }, 400);
+      }
+      if (!/^[a-z_]+\.[a-z0-9_]+$/i.test(entityId)) {
+        return json({ error: "invalid entity_id" }, 400);
+      }
+      const sb = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: claims, error: authErr } = await sb.auth.getClaims(token);
+      if (authErr || !claims?.claims) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+      const r = await fetch(
+        `${base}/api/camera_proxy_stream/${encodeURIComponent(entityId)}`,
+        { headers: { Authorization: `Bearer ${HA_TOKEN}` } },
+      );
+      const headers = new Headers(corsHeaders);
+      const ct = r.headers.get("content-type");
+      if (ct) headers.set("Content-Type", ct);
+      headers.set("Cache-Control", "no-store");
+      return new Response(r.body, { status: r.status, headers });
+    }
+
+    // Verify caller is authenticated for POST ops
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return json({ error: "Unauthorized" }, 401);
     }
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: authErr } = await supabase.auth.getClaims(token);
-    if (authErr || !claims?.claims) {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const postToken = authHeader.replace("Bearer ", "");
+    const { data: postClaims, error: postAuthErr } = await supabase.auth.getClaims(postToken);
+    if (postAuthErr || !postClaims?.claims) {
       return json({ error: "Unauthorized" }, 401);
     }
 
-    const base = HA_BASE_URL.replace(/\/$/, "");
     const haHeaders = {
       Authorization: `Bearer ${HA_TOKEN}`,
       "Content-Type": "application/json",
     };
-
-    // GET stream proxy: ?stream_path=/api/hls/xxx.m3u8 — used by hls.js for playlists/segments.
-    if (req.method === "GET") {
-      const url = new URL(req.url);
-      const streamPath = url.searchParams.get("stream_path");
-      if (!streamPath) return json({ error: "stream_path required" }, 400);
-      if (!/^\/api\/hls\/[A-Za-z0-9._\-\/]+$/.test(streamPath)) {
-        return json({ error: "invalid stream_path" }, 400);
-      }
-      const r = await fetch(`${base}${streamPath}`, {
-        headers: {
-          Authorization: `Bearer ${HA_TOKEN}`,
-          ...(req.headers.get("range") ? { Range: req.headers.get("range")! } : {}),
-        },
-      });
-      const headers = new Headers(corsHeaders);
-      const ct = r.headers.get("content-type");
-      if (ct) headers.set("Content-Type", ct);
-      const cl = r.headers.get("content-length");
-      if (cl) headers.set("Content-Length", cl);
-      const cr = r.headers.get("content-range");
-      if (cr) headers.set("Content-Range", cr);
-      const ar = r.headers.get("accept-ranges");
-      if (ar) headers.set("Accept-Ranges", ar);
-      return new Response(r.body, { status: r.status, headers });
-    }
 
     const body = (await req.json()) as ProxyRequest;
 
