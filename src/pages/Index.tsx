@@ -2025,7 +2025,10 @@ const QuickControls = () => {
   return (
     <div>
       <SectionHead title="Quick Controls" meta={`${tiles.length} TILES · TAP TO TOGGLE`} />
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}
+      >
         {tiles}
       </div>
     </div>
