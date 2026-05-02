@@ -1123,12 +1123,60 @@ const Security = () => {
   const { alarm, doorSensors, motionSensors } = useDiscovery();
   const armState = alarm?.state ?? "unknown";
   const armed = armState.startsWith("armed");
-  const all = [...doorSensors, ...motionSensors]
-    .filter((s) => s.entity_id !== "binary_sensor.hallway_motion_sensor")
-    .slice(0, 6);
+  const EXTERIOR_IDS = new Set([
+    "binary_sensor.front_door_sensor",
+    "binary_sensor.back_door_sensor",
+  ]);
+  const doorsOnly = doorSensors.filter(
+    (s) => s.attributes?.device_class === "door" || /door/i.test(friendly(s)),
+  );
+  const exterior = doorsOnly.filter(
+    (s) => EXTERIOR_IDS.has(s.entity_id) || /garage/i.test(friendly(s)),
+  );
+  const interior = doorsOnly.filter(
+    (s) => !EXTERIOR_IDS.has(s.entity_id) && !/garage/i.test(friendly(s)),
+  );
+
+  const renderRow = (s: typeof doorsOnly[number]) => {
+    const open = s.state === "on";
+    const rawName = friendly(s);
+    const isGarage = /garage/i.test(rawName);
+    const isExterior = EXTERIOR_IDS.has(s.entity_id) || isGarage;
+    const name =
+      rawName.replace(/\bsensors?\b/gi, "").replace(/\s{2,}/g, " ").trim() || rawName;
+    const label = open ? "OPEN" : "CLOSED";
+    const dot: "alert" | "warn" | "ok" = open
+      ? isExterior
+        ? "alert"
+        : "warn"
+      : "ok";
+    return (
+      <div
+        key={s.entity_id}
+        className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60"
+      >
+        <DoorClosed className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+        <span className="text-[12px] flex-1 min-w-0 truncate">{name}</span>
+        <StatusDot state={dot} />
+        <span className="mono text-[10px] text-foreground-dim w-16 text-right shrink-0">
+          {label}
+        </span>
+      </div>
+    );
+  };
+
+  const sectionLabel = (text: string) => (
+    <div
+      key={`label-${text}`}
+      className="mono text-[9px] tracking-[0.18em] text-foreground-mute uppercase pt-3 pb-1.5 first:pt-0"
+    >
+      {text}
+    </div>
+  );
+
   return (
     <Panel>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <Label>Perimeter</Label>
         <div className="flex items-center gap-2">
           <Lock className={`w-3 h-3 ${armed ? "text-odin-ok" : "text-foreground-dim"}`} strokeWidth={1.5} />
@@ -1137,56 +1185,13 @@ const Security = () => {
           </span>
         </div>
       </div>
-      {all.length === 0 ? (
-        <div className="text-[12px] text-foreground-mute py-2">No sensors discovered</div>
+      {doorsOnly.length === 0 ? (
+        <div className="text-[12px] text-foreground-mute py-2">No door sensors discovered</div>
       ) : (
-        <div className="grid grid-cols-1 gap-y-1">
-          {all.map((s) => {
-            const open = s.state === "on";
-            const isMotion =
-              s.attributes?.device_class === "motion" || s.attributes?.device_class === "occupancy";
-            const rawName = friendly(s);
-            const isGarage = /garage/i.test(rawName);
-            const isExteriorDoor =
-              s.entity_id === "binary_sensor.front_door_sensor" ||
-              s.entity_id === "binary_sensor.back_door_sensor" ||
-              isGarage;
-            const cleaned = rawName
-              .replace(/\bsensors?\b/gi, "")
-              .replace(/\s{2,}/g, " ")
-              .trim();
-            const name = isGarage
-              ? cleaned.replace(/\s*motion\s*/i, "").trim() || "Garage"
-              : cleaned || rawName;
-            const Icon = isMotion ? Activity : DoorClosed;
-            const label = isMotion
-              ? open
-                ? "ACTIVE"
-                : isGarage
-                  ? "CLOSED"
-                  : "CLEAR"
-              : open
-                ? "OPEN"
-                : "CLOSED";
-            const dot: "info" | "alert" | "warn" | "ok" = open
-              ? isMotion
-                ? "info"
-                : isExteriorDoor
-                  ? "alert"
-                  : "warn"
-              : "ok";
-            return (
-              <div key={s.entity_id} className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60">
-                <Icon className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
-                <span className="text-[12px] flex-1 min-w-0 truncate">{name}</span>
-                <StatusDot state={dot} />
-                <span className="mono text-[10px] text-foreground-dim w-16 text-right shrink-0">
-                  {label}
-                </span>
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60 opacity-60">
+        <div className="grid grid-cols-1">
+          {exterior.length > 0 && sectionLabel("Exterior")}
+          {exterior.map(renderRow)}
+          <div key="back-door-soon" className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60 opacity-60">
             <DoorClosed className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
             <span className="text-[12px] flex-1 min-w-0 truncate">Back Door</span>
             <StatusDot state="idle" />
@@ -1194,6 +1199,8 @@ const Security = () => {
               SOON
             </span>
           </div>
+          {interior.length > 0 && sectionLabel("Interior")}
+          {interior.map(renderRow)}
         </div>
       )}
     </Panel>
