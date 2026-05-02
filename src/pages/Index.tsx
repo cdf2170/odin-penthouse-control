@@ -1120,7 +1120,7 @@ const Climate = () => {
 };
 
 const Security = () => {
-  const { alarm, doorSensors, motionSensors } = useDiscovery();
+  const { alarm, doorSensors, garageCover } = useDiscovery();
   const armState = alarm?.state ?? "unknown";
   const armed = armState.startsWith("armed");
   const EXTERIOR_IDS = new Set([
@@ -1130,26 +1130,60 @@ const Security = () => {
   const doorsOnly = doorSensors.filter(
     (s) => s.attributes?.device_class === "door" || /door/i.test(friendly(s)),
   );
-  const exterior = doorsOnly.filter(
-    (s) => EXTERIOR_IDS.has(s.entity_id) || /garage/i.test(friendly(s)),
-  );
-  const interior = doorsOnly.filter(
-    (s) => !EXTERIOR_IDS.has(s.entity_id) && !/garage/i.test(friendly(s)),
+  const exteriorOrder = (id: string) => {
+    if (id === "binary_sensor.front_door_sensor") return 0;
+    if (id === "binary_sensor.back_door_sensor") return 1;
+    return 2; // garage last
+  };
+  const exteriorDoors = doorsOnly.filter((s) => EXTERIOR_IDS.has(s.entity_id));
+  const exterior: Array<{
+    id: string;
+    name: string;
+    open: boolean;
+    label: string;
+  }> = [
+    ...exteriorDoors.map((s) => ({
+      id: s.entity_id,
+      name:
+        friendly(s).replace(/\bsensors?\b/gi, "").replace(/\s{2,}/g, " ").trim() ||
+        friendly(s),
+      open: s.state === "on",
+      label: s.state === "on" ? "OPEN" : "CLOSED",
+    })),
+  ];
+  if (garageCover) {
+    const open =
+      garageCover.state === "open" || garageCover.state === "opening";
+    exterior.push({
+      id: garageCover.entity_id,
+      name: "Garage",
+      open,
+      label: open ? "OPEN" : "CLOSED",
+    });
+  }
+  exterior.sort((a, b) => exteriorOrder(a.id) - exteriorOrder(b.id));
+
+  const interior = doorsOnly.filter((s) => !EXTERIOR_IDS.has(s.entity_id));
+
+  const renderExterior = (e: (typeof exterior)[number]) => (
+    <div
+      key={e.id}
+      className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60"
+    >
+      <DoorClosed className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+      <span className="text-[12px] flex-1 min-w-0 truncate">{e.name}</span>
+      <StatusDot state={e.open ? "alert" : "ok"} />
+      <span className="mono text-[10px] text-foreground-dim w-16 text-right shrink-0">
+        {e.label}
+      </span>
+    </div>
   );
 
-  const renderRow = (s: typeof doorsOnly[number]) => {
+  const renderInterior = (s: (typeof doorsOnly)[number]) => {
     const open = s.state === "on";
-    const rawName = friendly(s);
-    const isGarage = /garage/i.test(rawName);
-    const isExterior = EXTERIOR_IDS.has(s.entity_id) || isGarage;
     const name =
-      rawName.replace(/\bsensors?\b/gi, "").replace(/\s{2,}/g, " ").trim() || rawName;
-    const label = open ? "OPEN" : "CLOSED";
-    const dot: "alert" | "warn" | "ok" = open
-      ? isExterior
-        ? "alert"
-        : "warn"
-      : "ok";
+      friendly(s).replace(/\bsensors?\b/gi, "").replace(/\s{2,}/g, " ").trim() ||
+      friendly(s);
     return (
       <div
         key={s.entity_id}
@@ -1157,9 +1191,9 @@ const Security = () => {
       >
         <DoorClosed className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
         <span className="text-[12px] flex-1 min-w-0 truncate">{name}</span>
-        <StatusDot state={dot} />
+        <StatusDot state={open ? "warn" : "ok"} />
         <span className="mono text-[10px] text-foreground-dim w-16 text-right shrink-0">
-          {label}
+          {open ? "OPEN" : "CLOSED"}
         </span>
       </div>
     );
@@ -1185,14 +1219,14 @@ const Security = () => {
           </span>
         </div>
       </div>
-      {doorsOnly.length === 0 ? (
+      {exterior.length === 0 && interior.length === 0 ? (
         <div className="text-[12px] text-foreground-mute py-2">No door sensors discovered</div>
       ) : (
         <div className="grid grid-cols-1">
           {exterior.length > 0 && sectionLabel("Exterior")}
-          {exterior.map(renderRow)}
+          {exterior.map(renderExterior)}
           {interior.length > 0 && sectionLabel("Interior")}
-          {interior.map(renderRow)}
+          {interior.map(renderInterior)}
         </div>
       )}
     </Panel>
