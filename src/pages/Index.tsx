@@ -2084,7 +2084,10 @@ const ActivityLog = () => {
               <li key={e.id} className="flex items-center gap-3 text-[12px]">
                 <Icon className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
                 <span className="text-foreground-dim truncate flex-1">{e.text}</span>
-                <span className="mono text-[10px] text-foreground-mute num shrink-0">
+                <span
+                  className="mono text-[10px] text-foreground-mute num shrink-0 cursor-help"
+                  title={new Date(e.ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
+                >
                   {timeAgo(e.ts)}
                 </span>
               </li>
