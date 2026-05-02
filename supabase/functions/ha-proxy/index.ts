@@ -129,7 +129,21 @@ Deno.serve(async (req) => {
           data_url: `data:${r.headers.get("content-type") ?? "image/jpeg"};base64,${b64}`,
         });
       }
-      default:
+      case "camera_stream": {
+        if (!body.entity_id) return json({ error: "entity_id required" }, 400);
+        // HA returns { url: "/api/hls/<token>/master_playlist.m3u8" }
+        const r = await fetch(
+          `${base}/api/camera/stream/${encodeURIComponent(body.entity_id)}`,
+          { method: "POST", headers: haHeaders, body: JSON.stringify({ format: "hls" }) },
+        );
+        if (!r.ok) {
+          const txt = await r.text();
+          return json({ error: `HA ${r.status}: ${txt}` }, r.status);
+        }
+        const data = await r.json();
+        // Return only the relative path; client will request via stream_path proxy
+        return json({ stream_path: data.url });
+      }
         return json({ error: `unknown op: ${body.op}` }, 400);
     }
   } catch (e) {
