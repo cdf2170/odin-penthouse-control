@@ -31,7 +31,11 @@ const ROOMS: RoomBinding[] = [
     presence: "binary_sensor.presence_sensor_fp2_6426_presence_sensor_1",
     status: "live",
   },
-  { name: "Bathroom", status: "future" },
+  {
+    name: "Bathroom",
+    door: "binary_sensor.bathroom_door_sensor",
+    status: "live",
+  },
   { name: "Kitchen", status: "future" },
 ];
 
