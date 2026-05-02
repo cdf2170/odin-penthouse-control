@@ -151,7 +151,7 @@ const Row = ({
   on: boolean;
   onText: string;
   offText: string;
-  tone: "alert" | "ok" | "active" | "idle";
+  tone: "alert" | "ok" | "active" | "idle" | "info" | "warn";
 }) => (
   <div className="flex items-center gap-3 py-1.5">
     <Icon className="w-3.5 h-3.5 text-foreground-mute" strokeWidth={1.5} />
