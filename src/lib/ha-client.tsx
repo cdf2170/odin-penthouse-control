@@ -145,8 +145,24 @@ export const HaProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Returns the proxied HLS playlist URL + the user's access token (for hls.js xhrSetup auth header).
+  const cameraStream = useCallback(async (entity_id: string) => {
+    try {
+      const r = await invokeProxy({ op: "camera_stream", entity_id });
+      const streamPath = (r as { stream_path?: string }).stream_path;
+      if (!streamPath) return null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return null;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const url = `https://${projectId}.supabase.co/functions/v1/ha-proxy?stream_path=${encodeURIComponent(streamPath)}`;
+      return { url, token: session.access_token };
+    } catch {
+      return null;
+    }
+  }, []);
+
   return (
-    <Ctx.Provider value={{ states, connected, error, callService, cameraSnapshot }}>
+    <Ctx.Provider value={{ states, connected, error, callService, cameraSnapshot, cameraStream }}>
       {children}
     </Ctx.Provider>
   );
