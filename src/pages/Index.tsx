@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
 
-import { useHa } from "@/lib/ha-client";
+import { useHa, type HaState } from "@/lib/ha-client";
 import { useAuth } from "@/lib/auth";
 import LightingView from "@/components/odin/views/LightingView";
 import ClimateView from "@/components/odin/views/ClimateView";
@@ -1912,30 +1912,186 @@ const GlobalScenes = () => {
   );
 };
 
+// ——— Activity narrator: turn raw HA state changes into plain English ———
+
+type NarratedEvent = {
+  id: string;
+  icon: any;
+  text: string;
+  ts: number;
+};
+
+const timeAgo = (ts: number) => {
+  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+};
+
+// Map a state-change to a human sentence + icon, or null to ignore.
+const narrate = (s: HaState): { icon: any; text: string } | null => {
+  const id = s.entity_id;
+  const st = s.state;
+  const a = s.attributes ?? {};
+
+  // Person presence
+  if (id === "person.chris_farrell") {
+    if (st === "home") return { icon: Home, text: "Chris arrived home" };
+    if (st === "not_home" || st === "away") return { icon: ArrowLeft, text: "Chris left home" };
+  }
+
+  // Garage door
+  if (id === "cover.ratgdo32disco_2930c0_door") {
+    if (st === "open" || st === "opening") return { icon: ArrowUpFromLine, text: "Garage opened" };
+    if (st === "closed" || st === "closing") return { icon: ArrowDownToLine, text: "Garage closed" };
+  }
+
+  // Doors
+  if (id === "binary_sensor.front_door_sensor" && st === "on")
+    return { icon: DoorClosed, text: "Front door opened" };
+  if (id === "binary_sensor.back_door_sensor" && st === "on")
+    return { icon: DoorClosed, text: "Back door opened" };
+
+  // Front door camera events
+  if (id === "binary_sensor.front_door_motion" && st === "on")
+    return { icon: Activity, text: "Motion detected · Front Door" };
+  if (id === "binary_sensor.front_door_person" && st === "on")
+    return { icon: Fingerprint, text: "Person at front door" };
+  if (id === "binary_sensor.front_door_vehicle" && st === "on")
+    return { icon: Car, text: "Vehicle at front door" };
+
+  // Scripts
+  if (id.startsWith("script.")) {
+    if (st !== "on") return null;
+    if (id === "script.goodnight") return { icon: Power, text: "Goodnight activated" };
+    if (id === "script.wake_up") return { icon: Sun, text: "Wake Up activated" };
+    if (id === "script.cinema") return { icon: Tv, text: "Cinema mode activated" };
+    if (id === "script.relax") return { icon: Music2, text: "Relax activated" };
+  }
+
+  // TV
+  if (id === "media_player.tlc_smart_tv") {
+    if (st === "off" || st === "standby") return { icon: Tv, text: "TV off" };
+    if (st === "on" || st === "playing" || st === "paused" || st === "idle")
+      return { icon: Tv, text: "TV on" };
+  }
+
+  // Living room speakers (Sonos)
+  if (id === "media_player.living_room_speakers_2" && st === "playing") {
+    const src = a.media_title ?? a.app_name ?? a.source ?? "now playing";
+    return { icon: Music2, text: `Sonos playing · ${src}` };
+  }
+
+  // Air purifier
+  if (id === "fan.vital_200s_series" && st === "on")
+    return { icon: Wind, text: "Air purifier on" };
+
+  // Room lights — only react to the room "group" entity to avoid spam
+  const roomLights: Record<string, string> = {
+    "light.living_room": "Living Room",
+    "light.kitchen": "Kitchen",
+    "light.bedroom": "Bedroom",
+    "light.office": "Office",
+    "light.bathroom": "Bathroom",
+  };
+  if (roomLights[id]) {
+    const room = roomLights[id];
+    if (st === "on") return { icon: Lightbulb, text: `${room} lights on` };
+    if (st === "off") return { icon: Lightbulb, text: `${room} lights off` };
+  }
+
+  return null;
+};
+
 const ActivityLog = () => {
   const { states } = useHa();
-  const recent = Object.values(states)
-    .filter((s) => s.last_changed)
-    .sort((a, b) => new Date(b.last_changed!).getTime() - new Date(a.last_changed!).getTime())
-    .slice(0, 8);
+  const [events, setEvents] = useState<NarratedEvent[]>([]);
+  const seen = useRef<Map<string, string>>(new Map());
+  const seeded = useRef(false);
+  const [, force] = useState(0);
+
+  // Re-render every 30s so "time ago" stays fresh
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Watch state map for changes, narrate, prepend.
+  useEffect(() => {
+    const next: NarratedEvent[] = [];
+    for (const s of Object.values(states)) {
+      const prev = seen.current.get(s.entity_id);
+      if (prev === s.state) continue;
+      seen.current.set(s.entity_id, s.state);
+      if (!seeded.current) continue; // don't flood feed on initial snapshot
+      const n = narrate(s);
+      if (!n) continue;
+      const ts = s.last_changed ? new Date(s.last_changed).getTime() : Date.now();
+      next.push({ id: `${s.entity_id}:${ts}`, icon: n.icon, text: n.text, ts });
+    }
+    if (!seeded.current) {
+      // Seed feed from current snapshot's most recent narratable changes
+      const seed: NarratedEvent[] = [];
+      for (const s of Object.values(states)) {
+        const n = narrate(s);
+        if (!n || !s.last_changed) continue;
+        seed.push({
+          id: `${s.entity_id}:${s.last_changed}`,
+          icon: n.icon,
+          text: n.text,
+          ts: new Date(s.last_changed).getTime(),
+        });
+      }
+      seed.sort((a, b) => b.ts - a.ts);
+      setEvents(seed.slice(0, 10));
+      seeded.current = true;
+      return;
+    }
+    if (next.length) {
+      setEvents((prev) => {
+        const merged = [...next.sort((a, b) => b.ts - a.ts), ...prev];
+        // de-dupe by id
+        const seenIds = new Set<string>();
+        const out: NarratedEvent[] = [];
+        for (const e of merged) {
+          if (seenIds.has(e.id)) continue;
+          seenIds.add(e.id);
+          out.push(e);
+          if (out.length >= 10) break;
+        }
+        return out;
+      });
+    }
+  }, [states]);
+
   return (
     <Panel>
       <div className="flex items-center justify-between mb-3">
         <Label>Activity</Label>
         <Bell className="w-3 h-3 text-foreground-mute" strokeWidth={1.5} />
       </div>
-      <ul className="space-y-2.5">
-        {recent.map((s) => (
-          <li key={s.entity_id} className="flex gap-3 text-[12px]">
-            <span className="mono text-foreground-mute num shrink-0">
-              {new Date(s.last_changed!).toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <span className="text-foreground-dim truncate">
-              {friendly(s)} → <span className="mono">{s.state}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {events.length === 0 ? (
+        <div className="text-[12px] text-foreground-mute py-2">Listening for events…</div>
+      ) : (
+        <ul className="space-y-2.5">
+          {events.map((e) => {
+            const Icon = e.icon;
+            return (
+              <li key={e.id} className="flex items-center gap-3 text-[12px]">
+                <Icon className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                <span className="text-foreground-dim truncate flex-1">{e.text}</span>
+                <span className="mono text-[10px] text-foreground-mute num shrink-0">
+                  {timeAgo(e.ts)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Panel>
   );
 };
