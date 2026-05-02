@@ -1908,8 +1908,9 @@ const QuickControls = () => {
     });
   };
 
-  const lightsTile = (room: string, label: string, icon: any) => {
-    const roomLights = findRoomLights(room);
+  const lightsTile = (rooms: string | string[], label: string, icon: any, key?: string) => {
+    const roomList = Array.isArray(rooms) ? rooms : [rooms];
+    const roomLights = roomList.flatMap((r) => findRoomLights(r));
     if (roomLights.length === 0) return null;
     const onLights = roomLights.filter(isOn);
     const active = onLights.length > 0;
@@ -1922,7 +1923,7 @@ const QuickControls = () => {
       : 0;
     return (
       <QuickTile
-        key={room}
+        key={key ?? roomList.join("+")}
         icon={icon}
         label={label}
         status={active ? `${avgLevel}%` : "Off"}
