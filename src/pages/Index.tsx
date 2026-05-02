@@ -1243,24 +1243,70 @@ const Garage = () => {
 
 const Doorbell = () => {
   const { doorbell } = useDiscovery();
-  const { cameraSnapshot } = useHa();
-  const [src, setSrc] = useState<string | null>(null);
-  const [updated, setUpdated] = useState<Date | null>(null);
+  const { cameraStream, cameraSnapshot } = useHa();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [posterSrc, setPosterSrc] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
+  // Single snapshot as poster while HLS warms up
   useEffect(() => {
     if (!doorbell) return;
     let cancelled = false;
-    const tick = async () => {
-      const url = await cameraSnapshot(doorbell.entity_id);
-      if (!cancelled && url) {
-        setSrc(url);
-        setUpdated(new Date());
-      }
-    };
-    tick();
-    const id = window.setInterval(tick, 4000);
-    return () => { cancelled = true; clearInterval(id); };
+    cameraSnapshot(doorbell.entity_id).then((url) => {
+      if (!cancelled && url) setPosterSrc(url);
+    });
+    return () => { cancelled = true; };
   }, [doorbell?.entity_id, cameraSnapshot]);
+
+  // Live HLS stream
+  useEffect(() => {
+    if (!doorbell) return;
+    const video = videoRef.current;
+    if (!video) return;
+    let hls: any = null;
+    let cancelled = false;
+
+    (async () => {
+      const stream = await cameraStream(doorbell.entity_id);
+      if (cancelled || !stream) {
+        if (!cancelled) setErr("Stream unavailable");
+        return;
+      }
+      const { default: Hls } = await import("hls.js");
+
+      // Safari can play HLS natively
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Native playback can't inject auth headers; proxy already validates via JWT in URL — fall through to hls.js
+      }
+
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          xhrSetup: (xhr: XMLHttpRequest) => {
+            xhr.setRequestHeader("Authorization", `Bearer ${stream.token}`);
+          },
+          lowLatencyMode: true,
+          backBufferLength: 10,
+        });
+        hls.on(Hls.Events.ERROR, (_e: unknown, data: any) => {
+          if (data?.fatal) setErr(`Stream error: ${data.type}`);
+        });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+          setLive(true);
+        });
+        hls.loadSource(stream.url);
+        hls.attachMedia(video);
+      } else {
+        setErr("HLS not supported in this browser");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (hls) hls.destroy();
+    };
+  }, [doorbell?.entity_id, cameraStream]);
 
   if (!doorbell) {
     return (
@@ -1276,22 +1322,30 @@ const Doorbell = () => {
       <div className="flex items-center justify-between p-4 pb-3">
         <Label>{friendly(doorbell)}</Label>
         <div className="flex items-center gap-2">
-          <span className="dot text-odin-alert" />
-          <span className="mono text-[10px] text-odin-alert">LIVE</span>
+          <span className={`dot ${live ? "text-odin-alert" : "text-foreground-mute"}`} />
+          <span className={`mono text-[10px] ${live ? "text-odin-alert" : "text-foreground-mute"}`}>
+            {live ? "LIVE" : err ? "OFFLINE" : "CONNECTING"}
+          </span>
         </div>
       </div>
       <div className="relative aspect-[16/10] bg-surface-inset border-t border-hairline">
-        {src ? (
-          <>
-            <img src={src} alt="" className="w-full h-full object-cover opacity-90" />
-            <div className="absolute inset-0 scanline pointer-events-none" />
-            <div className="absolute top-3 left-3 mono text-[10px] text-white/80 num bg-black/40 px-1.5 py-0.5">
-              SNAPSHOT · {updated?.toLocaleTimeString("en-US", { hour12: true }) ?? "—"}
-            </div>
-          </>
-        ) : (
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover opacity-95"
+          poster={posterSrc ?? undefined}
+          muted
+          playsInline
+          autoPlay
+        />
+        <div className="absolute inset-0 scanline pointer-events-none" />
+        {!live && !err && (
           <div className="absolute inset-0 grid place-items-center">
             <Video className="w-8 h-8 text-foreground-mute animate-pulse" strokeWidth={1} />
+          </div>
+        )}
+        {err && (
+          <div className="absolute bottom-3 left-3 mono text-[10px] text-odin-alert bg-black/60 px-1.5 py-0.5">
+            {err}
           </div>
         )}
       </div>
