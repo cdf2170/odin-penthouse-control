@@ -288,7 +288,7 @@ const SecurityHero = ({
         {/* Quick metrics */}
         <div className="hidden md:flex items-stretch gap-6 pl-6 border-l border-hairline">
           <Metric value={occupiedCount} label="Occupied" sub={`of ${liveCount}`} />
-          <Metric value={openDoors} label="Open" sub="openings" alert={openDoors > 0} />
+          <Metric value={openDoors} label="Perimeter" sub="exterior open" alert={openDoors > 0} />
         </div>
       </div>
 
