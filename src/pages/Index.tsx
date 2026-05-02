@@ -1982,13 +1982,13 @@ const QuickControls = () => {
       })()
     : null;
 
-  // Front Door — placeholder stub (wiring coming later)
+  // Front Door Lock — SwitchBot placeholder (wiring coming later)
   const frontDoorTile = (
     <QuickTile
       key="front-door"
       icon={Lock}
       label="Front Door"
-      status="Not linked"
+      status="Soon"
       active={false}
       tone="neutral"
       disabled
@@ -1996,13 +1996,46 @@ const QuickControls = () => {
     />
   );
 
-  // Order requested by user
+  // Back Door Lock — placeholder (wiring coming later)
+  const backDoorTile = (
+    <QuickTile
+      key="back-door"
+      icon={Lock}
+      label="Back Door"
+      status="Soon"
+      active={false}
+      tone="neutral"
+      disabled
+      onClick={() => {}}
+    />
+  );
+
+  // All Off — fires a user-defined HA automation (automation.all_off)
+  const allOffTile = (
+    <QuickTile
+      key="all-off"
+      icon={Power}
+      label="All Off"
+      status="Tap to run"
+      active={false}
+      tone="alert"
+      onClick={() =>
+        callService("automation", "trigger", {
+          entity_id: "automation.all_off",
+        })
+      }
+    />
+  );
+
+  // Logical flow: lighting → whole-home shutdown → environment → access
   const tiles = [
     lightsTile("Kitchen", "Kitchen Lights", Lightbulb),
     lightsTile("Living Room", "Living Room Lights", Lightbulb),
+    allOffTile,
     purifierTile,
     garageTile,
     frontDoorTile,
+    backDoorTile,
   ].filter(Boolean);
 
   if (tiles.length === 0) return null;
