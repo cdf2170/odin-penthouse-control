@@ -399,11 +399,16 @@ export default function SecurityView() {
     return all;
   }, [cards]);
 
-  const posture: Posture = openDoors > 0
+  const exteriorList = [
+    ...exteriorOpenCards.map((c) => c.binding.name),
+    ...(garageOpen ? ["Garage"] : []),
+  ];
+
+  const posture: Posture = exteriorOpenCount > 0
     ? {
         level: "attention",
-        headline: "Attention",
-        detail: `${openDoors} opening${openDoors === 1 ? "" : "s"} unsecured · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied`,
+        headline: "Perimeter Open",
+        detail: `${exteriorList.join(" · ")} unsecured`,
       }
     : perimeterAlert
       ? {
@@ -414,7 +419,7 @@ export default function SecurityView() {
       : {
           level: "secured",
           headline: "All Clear",
-          detail: `Property secured · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied · perimeter quiet`,
+          detail: `Perimeter secure · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied${openDoors > 0 ? ` · ${openDoors} interior open` : ""}`,
         };
 
   return (
