@@ -993,21 +993,70 @@ const NowPlaying = () => {
         SUPPORT_VOL_MUTE = 8, SUPPORT_SELECT_SOURCE = 2048;
   const has = (f: number) => (supportedFeatures & f) === f;
 
+  // Android package → friendly app name mapping
+  const APP_PACKAGES: Record<string, string> = {
+    "com.google.android.youtube.tv": "YouTube",
+    "com.google.android.youtube.tvkids": "YouTube Kids",
+    "com.netflix.ninja": "Netflix",
+    "com.disney.disneyplus": "Disney+",
+    "com.amazon.amazonvideo.livingroom": "Prime Video",
+    "com.plexapp.android": "Plex",
+    "com.spotify.tv.android": "Spotify",
+    "com.tcl.tv": "Live TV",
+    "com.google.android.tvlauncher": "Home",
+  };
+  const friendlyApp = (raw?: string) => {
+    if (!raw) return undefined;
+    if (APP_PACKAGES[raw]) return APP_PACKAGES[raw];
+    return /\./.test(raw) ? raw.split(".").slice(-1)[0] : raw;
+  };
+
   const svc = (service: string, data: Record<string, unknown> = {}) =>
     callService("media_player", service, { entity_id: playing.entity_id, ...data });
   const remote = (command: string) =>
     callService("remote", "send_command", { entity_id: "remote.tlc_smart_tv", command });
+  const launchApp = (pkg: string) => {
+    if (adb) {
+      callService("media_player", "play_media", {
+        entity_id: adb.entity_id,
+        media_content_type: "app",
+        media_content_id: pkg,
+      });
+    } else {
+      callService("remote", "turn_on", {
+        entity_id: "remote.tlc_smart_tv",
+        activity: pkg,
+      });
+    }
+  };
 
-  const title =
-    (a.media_title as string) ??
-    (a.app_name as string) ??
-    currentSource ??
-    (isOff ? "Off" : "Idle");
+  const appName = pick<string>("app_name") ?? friendlyApp(currentSource);
+  const mediaTitle = pick<string>("media_title");
+  const title = mediaTitle ?? appName ?? (isOff ? "Off" : "TCL Smart TV");
   const subtitle =
-    (a.media_artist as string) ??
-    (a.media_series_title as string) ??
-    (a.app_name as string && a.media_title ? (a.app_name as string) : undefined) ??
-    (currentSource && title !== currentSource ? currentSource : "");
+    (pick<string>("media_artist")) ??
+    (pick<string>("media_series_title")) ??
+    (mediaTitle && appName ? appName : "");
+
+  const position = pick<number>("media_position");
+  const duration = pick<number>("media_duration");
+  const showProgress =
+    typeof position === "number" && typeof duration === "number" && duration > 0;
+  const progressPct = showProgress ? Math.min(100, (position! / duration!) * 100) : 0;
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  };
+  const artwork = pick<string>("entity_picture");
+
+  const APP_LAUNCHERS = [
+    { name: "YouTube", pkg: "com.google.android.youtube.tv" },
+    { name: "Netflix", pkg: "com.netflix.ninja" },
+    { name: "Disney+", pkg: "com.disney.disneyplus" },
+    { name: "Plex", pkg: "com.plexapp.android" },
+    { name: "Spotify", pkg: "com.spotify.tv.android" },
+  ];
 
   return (
     <Panel>
@@ -1018,8 +1067,8 @@ const NowPlaying = () => {
 
       <div className="flex items-center gap-4 mb-5">
         <div className="w-16 h-16 bg-surface-inset border border-hairline-strong shrink-0 relative overflow-hidden">
-          {a.entity_picture ? (
-            <img src={a.entity_picture as string} alt="" className="w-full h-full object-cover" />
+          {artwork ? (
+            <img src={artwork} alt="" className="w-full h-full object-cover" />
           ) : isTv ? (
             <div className="absolute inset-0 grid place-items-center">
               <Tv className="w-6 h-6 text-foreground-mute" strokeWidth={1.25} />
@@ -1031,7 +1080,9 @@ const NowPlaying = () => {
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-medium truncate">{title}</div>
-          <div className="text-[12px] text-foreground-dim truncate">{subtitle}</div>
+          <div className="text-[12px] text-foreground-dim truncate">
+            {subtitle || (isTv && !isOff ? `${appName ?? "TCL Smart TV"} · ${effectiveState}` : "")}
+          </div>
         </div>
         {(has(SUPPORT_TURN_ON) || has(SUPPORT_TURN_OFF)) && (
           <button
@@ -1043,6 +1094,22 @@ const NowPlaying = () => {
           </button>
         )}
       </div>
+
+      {/* Progress bar — only when both position and duration are reported */}
+      {showProgress && (
+        <div className="mb-4">
+          <div className="h-px bg-surface-inset relative">
+            <div
+              className="h-px bg-odin-accent"
+              style={{ width: `${progressPct}%`, boxShadow: "0 0 8px hsl(var(--accent))" }}
+            />
+          </div>
+          <div className="flex justify-between mono text-[10px] text-foreground-mute mt-1.5 num">
+            <span>{fmtTime(position!)}</span>
+            <span>{fmtTime(duration!)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Transport + volume */}
       <div className="flex items-center justify-between">
@@ -1149,6 +1216,28 @@ const NowPlaying = () => {
             <div className="flex flex-col gap-1">
               <button onClick={() => remote("BACK")} className="px-2.5 h-8 grid place-items-center btn-tactile text-[10px] tracking-[0.15em]"><ArrowLeft className="w-3.5 h-3.5 mr-1" strokeWidth={1.5} />BACK</button>
               <button onClick={() => remote("HOME")} className="px-2.5 h-8 grid place-items-center btn-tactile text-[10px] tracking-[0.15em]"><Home className="w-3.5 h-3.5 mr-1" strokeWidth={1.5} />HOME</button>
+            </div>
+          </div>
+
+          {/* App launchers */}
+          <div className="mt-4 pt-4 border-t border-hairline/60">
+            <div className="label mb-2">Apps</div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {APP_LAUNCHERS.map((app) => {
+                const active = appName === app.name;
+                return (
+                  <button
+                    key={app.pkg}
+                    onClick={() => launchApp(app.pkg)}
+                    className={`text-[11px] px-2 py-1.5 border border-hairline-strong/60 hover:border-odin-accent text-center truncate transition-colors ${
+                      active ? "bg-surface-raised text-foreground border-odin-accent" : "text-foreground-dim"
+                    }`}
+                    title={`Launch ${app.name}`}
+                  >
+                    {app.name}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </>
