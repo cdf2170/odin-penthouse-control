@@ -421,6 +421,34 @@ const RoomDetailsTray = ({
 
         <div className="flex-1 overflow-auto">
           <div className="px-12 py-10 space-y-10">
+            {/* Scenes — refined chips (top of drill-down for fast access) */}
+            {room.scenes.length > 0 && (
+              <section>
+                <div className="flex items-baseline justify-between mb-5">
+                  <Label>Scenes</Label>
+                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                    {room.scenes.length} curated
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {room.scenes.map((s) => (
+                    <button
+                      key={s.entity}
+                      onClick={() => engageScene(s.entity)}
+                      className="group panel p-5 text-left transition-colors hover:border-odin-accent"
+                    >
+                      <div className="text-[10px] mono uppercase tracking-[0.24em] text-foreground-mute mb-3 group-hover:text-odin-accent transition-colors">
+                        Scene
+                      </div>
+                      <div className="text-[15px] font-medium tracking-[0.02em] truncate">
+                        {s.name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Master row */}
             {room.lights.length > 0 && (
               <section>
@@ -471,34 +499,6 @@ const RoomDetailsTray = ({
                       />
                     </div>
                   </div>
-                </div>
-              </section>
-            )}
-
-            {/* Scenes — refined chips */}
-            {room.scenes.length > 0 && (
-              <section>
-                <div className="flex items-baseline justify-between mb-5">
-                  <Label>Scenes</Label>
-                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
-                    {room.scenes.length} curated
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {room.scenes.map((s) => (
-                    <button
-                      key={s.entity}
-                      onClick={() => engageScene(s.entity)}
-                      className="group panel p-5 text-left transition-colors hover:border-odin-accent"
-                    >
-                      <div className="text-[10px] mono uppercase tracking-[0.24em] text-foreground-mute mb-3 group-hover:text-odin-accent transition-colors">
-                        Scene
-                      </div>
-                      <div className="text-[15px] font-medium tracking-[0.02em] truncate">
-                        {s.name}
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </section>
             )}
