@@ -428,7 +428,7 @@ export default function SecurityView() {
         posture={posture}
         occupiedCount={occupiedCount}
         liveCount={liveCount}
-        openDoors={openDoors}
+        openDoors={exteriorOpenCount}
         perimeter={perimeter}
         doorbellOnline={doorbellOnline}
         sirenReady={sirenReady}
