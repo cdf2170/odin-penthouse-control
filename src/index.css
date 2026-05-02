@@ -23,6 +23,7 @@
     --idle: 230 5% 32%;
     --alert: 358 70% 56%;
     --ok: 152 40% 48%;
+    --info: 212 90% 60%;           /* blue — presence */
 
     --card: var(--surface);
     --card-foreground: var(--foreground);
