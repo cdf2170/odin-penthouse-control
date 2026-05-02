@@ -1191,14 +1191,6 @@ const Security = () => {
         <div className="grid grid-cols-1">
           {exterior.length > 0 && sectionLabel("Exterior")}
           {exterior.map(renderRow)}
-          <div key="back-door-soon" className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60 opacity-60">
-            <DoorClosed className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
-            <span className="text-[12px] flex-1 min-w-0 truncate">Back Door</span>
-            <StatusDot state="idle" />
-            <span className="mono text-[10px] text-foreground-mute w-16 text-right shrink-0">
-              SOON
-            </span>
-          </div>
           {interior.length > 0 && sectionLabel("Interior")}
           {interior.map(renderRow)}
         </div>
