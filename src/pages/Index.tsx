@@ -227,7 +227,7 @@ const RoomPanel = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-medium tracking-[0.04em] truncate">{room.room}</h3>
-            <StatusDot state={occupied ? "active" : "idle"} />
+            <StatusDot state={occupied ? "info" : "idle"} />
           </div>
           <div className="label mt-1.5 truncate">
             {occupied ? "Occupied" : "Vacant"}
@@ -404,7 +404,7 @@ const RoomDetailsTray = ({
               {room.room}
             </h1>
             <div className="flex items-center gap-3 mt-4">
-              <StatusDot state={occupied ? "active" : "idle"} />
+              <StatusDot state={occupied ? "info" : "idle"} />
               <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
                 {occupied ? "Occupied" : "Vacant"} · {onLights.length}/{room.lights.length} fixtures · {avgLevel}% avg
               </span>
@@ -1145,6 +1145,10 @@ const Security = () => {
               s.attributes?.device_class === "motion" || s.attributes?.device_class === "occupancy";
             const rawName = friendly(s);
             const isGarage = /garage/i.test(rawName);
+            const isExteriorDoor =
+              s.entity_id === "binary_sensor.front_door_sensor" ||
+              s.entity_id === "binary_sensor.back_door_sensor" ||
+              isGarage;
             const cleaned = rawName
               .replace(/\bsensors?\b/gi, "")
               .replace(/\s{2,}/g, " ")
@@ -1162,11 +1166,18 @@ const Security = () => {
               : open
                 ? "OPEN"
                 : "CLOSED";
+            const dot: "info" | "alert" | "warn" | "ok" = open
+              ? isMotion
+                ? "info"
+                : isExteriorDoor
+                  ? "alert"
+                  : "warn"
+              : "ok";
             return (
               <div key={s.entity_id} className="flex items-center gap-2.5 py-1.5 border-b border-hairline/60">
                 <Icon className="w-3.5 h-3.5 text-foreground-mute shrink-0" strokeWidth={1.5} />
                 <span className="text-[12px] flex-1 min-w-0 truncate">{name}</span>
-                <StatusDot state={open ? (isMotion ? "active" : "alert") : "ok"} />
+                <StatusDot state={dot} />
                 <span className="mono text-[10px] text-foreground-dim w-16 text-right shrink-0">
                   {label}
                 </span>
@@ -1736,19 +1747,19 @@ const GarageQuickCard = () => {
       <div className="flex items-center justify-between p-4 pb-3">
         <Label>Garage · {friendly(garageCover)}</Label>
         <div className="flex items-center gap-2">
-          <StatusDot state={open ? "active" : "idle"} />
-          <span className={`mono text-[10px] uppercase ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
+          <StatusDot state={open ? "alert" : "ok"} />
+          <span className={`mono text-[10px] uppercase ${open ? "text-odin-alert" : "text-foreground-mute"}`}>
             {garageCover.state}
           </span>
         </div>
       </div>
       <div className="px-4 pb-4 flex items-center gap-4">
         <div className="w-14 h-14 border border-hairline-strong grid place-items-center bg-surface-inset relative shrink-0">
-          <Car className={`w-6 h-6 ${open ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.25} />
+          <Car className={`w-6 h-6 ${open ? "text-odin-alert" : "text-foreground-dim"}`} strokeWidth={1.25} />
           {open && (
             <div
-              className="absolute inset-0 border border-odin-accent/60"
-              style={{ boxShadow: "0 0 14px hsl(var(--accent) / 0.3) inset" }}
+              className="absolute inset-0 border border-odin-alert/60"
+              style={{ boxShadow: "0 0 14px hsl(var(--alert) / 0.3) inset" }}
             />
           )}
         </div>
