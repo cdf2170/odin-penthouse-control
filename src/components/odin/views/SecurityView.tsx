@@ -311,14 +311,14 @@ const SecurityHero = ({
               key={p.id}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 border transition-colors shrink-0 ${
                 p.active
-                  ? "border-odin-accent/70 text-odin-accent"
+                  ? "border-odin-info/70 text-odin-info"
                   : "border-hairline text-foreground-mute"
               }`}
-              style={p.active ? { boxShadow: "0 0 12px hsl(var(--accent) / 0.18) inset" } : undefined}
+              style={p.active ? { boxShadow: "0 0 12px hsl(var(--info) / 0.18) inset" } : undefined}
             >
               <p.icon className="w-3 h-3" strokeWidth={1.5} />
               <span className="mono text-[10px] uppercase tracking-[0.16em]">{p.label}</span>
-              <StatusDot state={p.active ? "active" : "idle"} />
+              <StatusDot state={p.active ? "info" : "idle"} />
             </div>
           ))}
         </div>
@@ -468,9 +468,19 @@ export default function SecurityView() {
                 s.attributes?.device_class === "motion" ||
                 s.attributes?.device_class === "occupancy" ||
                 s.attributes?.device_class === "presence";
+              const isExteriorDoor =
+                s.entity_id === "binary_sensor.front_door_sensor" ||
+                s.entity_id === "binary_sensor.back_door_sensor";
+              const dot: "info" | "alert" | "warn" | "ok" = open
+                ? isMotion
+                  ? "info"
+                  : isExteriorDoor
+                    ? "alert"
+                    : "warn"
+                : "ok";
               return (
                 <li key={s.entity_id} className="flex items-center gap-3 py-2.5">
-                  <StatusDot state={open ? (isMotion ? "active" : "alert") : "ok"} />
+                  <StatusDot state={dot} />
                   <span className="text-[12px] flex-1 truncate text-foreground-dim">
                     {friendly(s)}
                   </span>
