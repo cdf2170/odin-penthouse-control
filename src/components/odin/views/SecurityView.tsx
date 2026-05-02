@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { DoorClosed, Activity, Car, Clock } from "lucide-react";
+import {
+  DoorClosed, Activity, Car, ShieldCheck, ShieldAlert, Shield,
+  Eye, UserRound, PawPrint, Bell, Radio, Siren,
+} from "lucide-react";
 import { Panel, Label, SectionHead, StatusDot, TactileButton } from "../primitives";
 import { useHa } from "@/lib/ha-client";
 import { useDiscovery, friendly } from "@/lib/ha-discovery";
