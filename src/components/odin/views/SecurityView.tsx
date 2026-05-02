@@ -288,7 +288,7 @@ const SecurityHero = ({
         {/* Quick metrics */}
         <div className="hidden md:flex items-stretch gap-6 pl-6 border-l border-hairline">
           <Metric value={occupiedCount} label="Occupied" sub={`of ${liveCount}`} />
-          <Metric value={openDoors} label="Open" sub="openings" alert={openDoors > 0} />
+          <Metric value={openDoors} label="Perimeter" sub="exterior open" alert={openDoors > 0} />
         </div>
       </div>
 
@@ -365,6 +365,16 @@ export default function SecurityView() {
   const occupiedCount = cards.filter((c) => c.presence?.state === "on").length;
   const openDoors = cards.filter((c) => c.door?.state === "on").length;
 
+  // Only exterior openings affect posture (interior doors being open is normal)
+  const EXTERIOR_ROOMS = new Set(["Front Door", "Back Door"]);
+  const exteriorOpenCards = cards.filter(
+    (c) => EXTERIOR_ROOMS.has(c.binding.name) && c.door?.state === "on",
+  );
+  const garageCover = states["cover.garage_door"];
+  const garageOpen =
+    garageCover?.state === "open" || garageCover?.state === "opening";
+  const exteriorOpenCount = exteriorOpenCards.length + (garageOpen ? 1 : 0);
+
   // Perimeter AI
   const perimeter = PERIMETER_AI.map((p) => ({
     ...p,
@@ -389,11 +399,16 @@ export default function SecurityView() {
     return all;
   }, [cards]);
 
-  const posture: Posture = openDoors > 0
+  const exteriorList = [
+    ...exteriorOpenCards.map((c) => c.binding.name),
+    ...(garageOpen ? ["Garage"] : []),
+  ];
+
+  const posture: Posture = exteriorOpenCount > 0
     ? {
         level: "attention",
-        headline: "Attention",
-        detail: `${openDoors} opening${openDoors === 1 ? "" : "s"} unsecured · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied`,
+        headline: "Perimeter Open",
+        detail: `${exteriorList.join(" · ")} unsecured`,
       }
     : perimeterAlert
       ? {
@@ -404,7 +419,7 @@ export default function SecurityView() {
       : {
           level: "secured",
           headline: "All Clear",
-          detail: `Property secured · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied · perimeter quiet`,
+          detail: `Perimeter secure · ${occupiedCount} room${occupiedCount === 1 ? "" : "s"} occupied${openDoors > 0 ? ` · ${openDoors} interior open` : ""}`,
         };
 
   return (
@@ -413,7 +428,7 @@ export default function SecurityView() {
         posture={posture}
         occupiedCount={occupiedCount}
         liveCount={liveCount}
-        openDoors={openDoors}
+        openDoors={exteriorOpenCount}
         perimeter={perimeter}
         doorbellOnline={doorbellOnline}
         sirenReady={sirenReady}
