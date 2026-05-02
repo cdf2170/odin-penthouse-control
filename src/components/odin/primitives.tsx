@@ -12,7 +12,7 @@ export const Label = forwardRef<HTMLSpanElement, { children: ReactNode; classNam
 );
 Label.displayName = "Label";
 
-export type DotState = "active" | "idle" | "alert" | "ok";
+export type DotState = "active" | "idle" | "alert" | "ok" | "info" | "warn";
 export const StatusDot = forwardRef<HTMLSpanElement, { state?: DotState }>(
   ({ state = "idle" }, ref) => {
     const color = {
@@ -20,6 +20,8 @@ export const StatusDot = forwardRef<HTMLSpanElement, { state?: DotState }>(
       idle: "text-odin-idle",
       alert: "text-odin-alert",
       ok: "text-odin-ok",
+      info: "text-odin-info",
+      warn: "text-odin-accent",
     }[state];
     return <span ref={ref} className={`dot ${color}`} />;
   }
