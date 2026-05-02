@@ -85,7 +85,17 @@ const RoomCard = ({
 
   const doorOpen = door?.state === "on";
   const occupied = presence?.state === "on";
-  const anyAlert = doorOpen;
+  const isExterior =
+    binding.name === "Front Door" || binding.name === "Back Door";
+  // Interior doors open = warn (yellow), never alert (red)
+  const doorOpenTone: "alert" | "warn" = isExterior ? "alert" : "warn";
+
+  // Header dot priority: open door (red exterior / yellow interior) > presence (blue) > ok (green)
+  const headerDot = doorOpen
+    ? doorOpenTone
+    : occupied
+      ? "info"
+      : "ok";
 
   return (
     <Panel>
@@ -99,7 +109,7 @@ const RoomCard = ({
             {door ? ` · ${doorOpen ? "Door Open" : "Door Closed"}` : ""}
           </div>
         </div>
-        <StatusDot state={anyAlert ? "alert" : occupied ? "active" : "ok"} />
+        <StatusDot state={headerDot} />
       </div>
 
       <div className="mt-5 space-y-2.5">
@@ -110,7 +120,7 @@ const RoomCard = ({
             on={doorOpen}
             onText="OPEN"
             offText="CLOSED"
-            tone={doorOpen ? "alert" : "ok"}
+            tone={doorOpen ? doorOpenTone : "ok"}
           />
         )}
         {presence && (
@@ -120,7 +130,7 @@ const RoomCard = ({
             on={occupied}
             onText="ACTIVE"
             offText="CLEAR"
-            tone={occupied ? "active" : "idle"}
+            tone={occupied ? "info" : "idle"}
           />
         )}
       </div>
