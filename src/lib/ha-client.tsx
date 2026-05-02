@@ -24,6 +24,7 @@ interface HaCtx {
     service_data?: Record<string, unknown>,
   ) => Promise<void>;
   cameraSnapshot: (entity_id: string) => Promise<string | null>;
+  cameraStream: (entity_id: string) => Promise<{ url: string; token: string } | null>;
 }
 
 const Ctx = createContext<HaCtx>({
@@ -32,6 +33,7 @@ const Ctx = createContext<HaCtx>({
   error: null,
   callService: async () => {},
   cameraSnapshot: async () => null,
+  cameraStream: async () => null,
 });
 
 async function invokeProxy(body: Record<string, unknown>) {
