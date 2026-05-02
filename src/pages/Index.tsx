@@ -1243,69 +1243,20 @@ const Garage = () => {
 
 const Doorbell = () => {
   const { doorbell } = useDiscovery();
-  const { cameraStream, cameraSnapshot } = useHa();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [posterSrc, setPosterSrc] = useState<string | null>(null);
+  const { cameraStream } = useHa();
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [live, setLive] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Single snapshot as poster while HLS warms up
   useEffect(() => {
     if (!doorbell) return;
     let cancelled = false;
-    cameraSnapshot(doorbell.entity_id).then((url) => {
-      if (!cancelled && url) setPosterSrc(url);
+    cameraStream(doorbell.entity_id).then((s) => {
+      if (cancelled) return;
+      if (s) setStreamUrl(s.url);
+      else setErr("Stream unavailable");
     });
     return () => { cancelled = true; };
-  }, [doorbell?.entity_id, cameraSnapshot]);
-
-  // Live HLS stream
-  useEffect(() => {
-    if (!doorbell) return;
-    const video = videoRef.current;
-    if (!video) return;
-    let hls: any = null;
-    let cancelled = false;
-
-    (async () => {
-      const stream = await cameraStream(doorbell.entity_id);
-      if (cancelled || !stream) {
-        if (!cancelled) setErr("Stream unavailable");
-        return;
-      }
-      const { default: Hls } = await import("hls.js");
-
-      // Safari can play HLS natively
-      if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Native playback can't inject auth headers; proxy already validates via JWT in URL — fall through to hls.js
-      }
-
-      if (Hls.isSupported()) {
-        hls = new Hls({
-          xhrSetup: (xhr: XMLHttpRequest) => {
-            xhr.setRequestHeader("Authorization", `Bearer ${stream.token}`);
-          },
-          lowLatencyMode: true,
-          backBufferLength: 10,
-        });
-        hls.on(Hls.Events.ERROR, (_e: unknown, data: any) => {
-          if (data?.fatal) setErr(`Stream error: ${data.type}`);
-        });
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => {});
-          setLive(true);
-        });
-        hls.loadSource(stream.url);
-        hls.attachMedia(video);
-      } else {
-        setErr("HLS not supported in this browser");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (hls) hls.destroy();
-    };
   }, [doorbell?.entity_id, cameraStream]);
 
   if (!doorbell) {
@@ -1329,14 +1280,15 @@ const Doorbell = () => {
         </div>
       </div>
       <div className="relative aspect-[16/10] bg-surface-inset border-t border-hairline">
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover opacity-95"
-          poster={posterSrc ?? undefined}
-          muted
-          playsInline
-          autoPlay
-        />
+        {streamUrl && (
+          <img
+            src={streamUrl}
+            alt="Doorbell live feed"
+            className="w-full h-full object-cover opacity-95"
+            onLoad={() => setLive(true)}
+            onError={() => setErr("Stream error")}
+          />
+        )}
         <div className="absolute inset-0 scanline pointer-events-none" />
         {!live && !err && (
           <div className="absolute inset-0 grid place-items-center">
