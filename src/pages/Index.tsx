@@ -993,21 +993,70 @@ const NowPlaying = () => {
         SUPPORT_VOL_MUTE = 8, SUPPORT_SELECT_SOURCE = 2048;
   const has = (f: number) => (supportedFeatures & f) === f;
 
+  // Android package → friendly app name mapping
+  const APP_PACKAGES: Record<string, string> = {
+    "com.google.android.youtube.tv": "YouTube",
+    "com.google.android.youtube.tvkids": "YouTube Kids",
+    "com.netflix.ninja": "Netflix",
+    "com.disney.disneyplus": "Disney+",
+    "com.amazon.amazonvideo.livingroom": "Prime Video",
+    "com.plexapp.android": "Plex",
+    "com.spotify.tv.android": "Spotify",
+    "com.tcl.tv": "Live TV",
+    "com.google.android.tvlauncher": "Home",
+  };
+  const friendlyApp = (raw?: string) => {
+    if (!raw) return undefined;
+    if (APP_PACKAGES[raw]) return APP_PACKAGES[raw];
+    return /\./.test(raw) ? raw.split(".").slice(-1)[0] : raw;
+  };
+
   const svc = (service: string, data: Record<string, unknown> = {}) =>
     callService("media_player", service, { entity_id: playing.entity_id, ...data });
   const remote = (command: string) =>
     callService("remote", "send_command", { entity_id: "remote.tlc_smart_tv", command });
+  const launchApp = (pkg: string) => {
+    if (adb) {
+      callService("media_player", "play_media", {
+        entity_id: adb.entity_id,
+        media_content_type: "app",
+        media_content_id: pkg,
+      });
+    } else {
+      callService("remote", "turn_on", {
+        entity_id: "remote.tlc_smart_tv",
+        activity: pkg,
+      });
+    }
+  };
 
-  const title =
-    (a.media_title as string) ??
-    (a.app_name as string) ??
-    currentSource ??
-    (isOff ? "Off" : "Idle");
+  const appName = pick<string>("app_name") ?? friendlyApp(currentSource);
+  const mediaTitle = pick<string>("media_title");
+  const title = mediaTitle ?? appName ?? (isOff ? "Off" : "TCL Smart TV");
   const subtitle =
-    (a.media_artist as string) ??
-    (a.media_series_title as string) ??
-    (a.app_name as string && a.media_title ? (a.app_name as string) : undefined) ??
-    (currentSource && title !== currentSource ? currentSource : "");
+    (pick<string>("media_artist")) ??
+    (pick<string>("media_series_title")) ??
+    (mediaTitle && appName ? appName : "");
+
+  const position = pick<number>("media_position");
+  const duration = pick<number>("media_duration");
+  const showProgress =
+    typeof position === "number" && typeof duration === "number" && duration > 0;
+  const progressPct = showProgress ? Math.min(100, (position! / duration!) * 100) : 0;
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  };
+  const artwork = pick<string>("entity_picture");
+
+  const APP_LAUNCHERS = [
+    { name: "YouTube", pkg: "com.google.android.youtube.tv" },
+    { name: "Netflix", pkg: "com.netflix.ninja" },
+    { name: "Disney+", pkg: "com.disney.disneyplus" },
+    { name: "Plex", pkg: "com.plexapp.android" },
+    { name: "Spotify", pkg: "com.spotify.tv.android" },
+  ];
 
   return (
     <Panel>
