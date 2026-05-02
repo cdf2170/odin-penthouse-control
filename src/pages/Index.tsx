@@ -1067,8 +1067,8 @@ const NowPlaying = () => {
 
       <div className="flex items-center gap-4 mb-5">
         <div className="w-16 h-16 bg-surface-inset border border-hairline-strong shrink-0 relative overflow-hidden">
-          {a.entity_picture ? (
-            <img src={a.entity_picture as string} alt="" className="w-full h-full object-cover" />
+          {artwork ? (
+            <img src={artwork} alt="" className="w-full h-full object-cover" />
           ) : isTv ? (
             <div className="absolute inset-0 grid place-items-center">
               <Tv className="w-6 h-6 text-foreground-mute" strokeWidth={1.25} />
@@ -1080,7 +1080,9 @@ const NowPlaying = () => {
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-medium truncate">{title}</div>
-          <div className="text-[12px] text-foreground-dim truncate">{subtitle}</div>
+          <div className="text-[12px] text-foreground-dim truncate">
+            {subtitle || (isTv && !isOff ? `${appName ?? "TCL Smart TV"} · ${effectiveState}` : "")}
+          </div>
         </div>
         {(has(SUPPORT_TURN_ON) || has(SUPPORT_TURN_OFF)) && (
           <button
@@ -1092,6 +1094,22 @@ const NowPlaying = () => {
           </button>
         )}
       </div>
+
+      {/* Progress bar — only when both position and duration are reported */}
+      {showProgress && (
+        <div className="mb-4">
+          <div className="h-px bg-surface-inset relative">
+            <div
+              className="h-px bg-odin-accent"
+              style={{ width: `${progressPct}%`, boxShadow: "0 0 8px hsl(var(--accent))" }}
+            />
+          </div>
+          <div className="flex justify-between mono text-[10px] text-foreground-mute mt-1.5 num">
+            <span>{fmtTime(position!)}</span>
+            <span>{fmtTime(duration!)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Transport + volume */}
       <div className="flex items-center justify-between">
