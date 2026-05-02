@@ -1217,8 +1217,8 @@ const Garage = () => {
       <div className="flex items-center justify-between p-4 pb-3">
         <Label>Garage · {friendly(garageCover)}</Label>
         <div className="flex items-center gap-2">
-          <StatusDot state={open ? "active" : "idle"} />
-          <span className={`mono text-[10px] uppercase ${open ? "text-odin-accent" : "text-foreground-mute"}`}>
+          <StatusDot state={open ? "alert" : "ok"} />
+          <span className={`mono text-[10px] uppercase ${open ? "text-odin-alert" : "text-foreground-mute"}`}>
             {garageCover.state}
           </span>
         </div>
@@ -1226,8 +1226,8 @@ const Garage = () => {
 
       <div className="px-4 pb-4 flex items-center gap-4 border-b border-hairline">
         <div className="w-14 h-14 border border-hairline-strong grid place-items-center bg-surface-inset relative">
-          <Car className={`w-6 h-6 ${open ? "text-odin-accent" : "text-foreground-dim"}`} strokeWidth={1.25} />
-          {open && <div className="absolute inset-0 border border-odin-accent/60" style={{ boxShadow: "0 0 14px hsl(var(--accent) / 0.3) inset" }} />}
+          <Car className={`w-6 h-6 ${open ? "text-odin-alert" : "text-foreground-dim"}`} strokeWidth={1.25} />
+          {open && <div className="absolute inset-0 border border-odin-alert/60" style={{ boxShadow: "0 0 14px hsl(var(--alert) / 0.3) inset" }} />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[14px] font-medium capitalize">{garageCover.state}</div>
