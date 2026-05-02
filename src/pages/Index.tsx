@@ -2010,28 +2010,10 @@ const QuickControls = () => {
     />
   );
 
-  // All Off — fires a user-defined HA automation (automation.all_off)
-  const allOffTile = (
-    <QuickTile
-      key="all-off"
-      icon={Power}
-      label="All Off"
-      status="Tap to run"
-      active={false}
-      tone="alert"
-      onClick={() =>
-        callService("automation", "trigger", {
-          entity_id: "automation.all_off",
-        })
-      }
-    />
-  );
-
-  // Logical flow: lighting → whole-home shutdown → environment → access
+  // Logical flow: lighting → environment → access
   const tiles = [
     lightsTile("Kitchen", "Kitchen Lights", Lightbulb),
     lightsTile("Living Room", "Living Room Lights", Lightbulb),
-    allOffTile,
     purifierTile,
     garageTile,
     frontDoorTile,
