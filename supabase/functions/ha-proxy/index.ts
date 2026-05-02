@@ -48,12 +48,39 @@ Deno.serve(async (req) => {
       return json({ error: "Unauthorized" }, 401);
     }
 
-    const body = (await req.json()) as ProxyRequest;
     const base = HA_BASE_URL.replace(/\/$/, "");
     const haHeaders = {
       Authorization: `Bearer ${HA_TOKEN}`,
       "Content-Type": "application/json",
     };
+
+    // GET stream proxy: ?stream_path=/api/hls/xxx.m3u8 — used by hls.js for playlists/segments.
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      const streamPath = url.searchParams.get("stream_path");
+      if (!streamPath) return json({ error: "stream_path required" }, 400);
+      if (!/^\/api\/hls\/[A-Za-z0-9._\-\/]+$/.test(streamPath)) {
+        return json({ error: "invalid stream_path" }, 400);
+      }
+      const r = await fetch(`${base}${streamPath}`, {
+        headers: {
+          Authorization: `Bearer ${HA_TOKEN}`,
+          ...(req.headers.get("range") ? { Range: req.headers.get("range")! } : {}),
+        },
+      });
+      const headers = new Headers(corsHeaders);
+      const ct = r.headers.get("content-type");
+      if (ct) headers.set("Content-Type", ct);
+      const cl = r.headers.get("content-length");
+      if (cl) headers.set("Content-Length", cl);
+      const cr = r.headers.get("content-range");
+      if (cr) headers.set("Content-Range", cr);
+      const ar = r.headers.get("accept-ranges");
+      if (ar) headers.set("Accept-Ranges", ar);
+      return new Response(r.body, { status: r.status, headers });
+    }
+
+    const body = (await req.json()) as ProxyRequest;
 
     switch (body.op) {
       case "states": {
