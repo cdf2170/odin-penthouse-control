@@ -43,6 +43,7 @@ export default {
           idle: "hsl(var(--idle))",
           alert: "hsl(var(--alert))",
           ok: "hsl(var(--ok))",
+          info: "hsl(var(--info))",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",
