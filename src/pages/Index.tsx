@@ -698,7 +698,110 @@ const RoomDetailsTray = ({
               );
             })()}
 
-            {/* Audio — premium media card */}
+            {/* Sensors — door, motion, climate readings, cameras */}
+            {(() => {
+              const doors = (room as any).doorSensors ?? [];
+              const motions = (room as any).motionSensors ?? [];
+              const climateZones = (room as any).climates ?? [];
+              const roomSensors = (room as any).sensors ?? [];
+              const roomCameras = (room as any).cameras ?? [];
+              const total =
+                doors.length + motions.length + climateZones.length + roomSensors.length + roomCameras.length;
+              if (total === 0) return null;
+
+              const formatVal = (s: any) => {
+                const unit = s.attributes?.unit_of_measurement ?? "";
+                const v = s.state;
+                if (v === "unavailable" || v === "unknown") return "—";
+                const num = Number(v);
+                return Number.isFinite(num) ? `${Math.round(num * 10) / 10}${unit}` : `${v}${unit ? " " + unit : ""}`;
+              };
+
+              return (
+                <section>
+                  <div className="flex items-baseline justify-between mb-5">
+                    <Label>Sensors</Label>
+                    <span className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute num">
+                      {total} reporting
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {doors.map((d: any) => {
+                      const open = d.state === "on";
+                      // Interior doors only in room drill-down → warn (yellow) when open, never red
+                      return (
+                        <div key={d.entity_id} className="panel p-4 flex items-center gap-3">
+                          <DoorClosed className="w-4 h-4 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] truncate">{friendly(d)}</div>
+                            <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-0.5">
+                              {open ? "Open" : "Closed"}
+                            </div>
+                          </div>
+                          <StatusDot state={open ? "warn" : "ok"} />
+                        </div>
+                      );
+                    })}
+                    {motions.map((m: any) => {
+                      const active = m.state === "on";
+                      return (
+                        <div key={m.entity_id} className="panel p-4 flex items-center gap-3">
+                          <Activity className="w-4 h-4 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] truncate">{friendly(m)}</div>
+                            <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-0.5">
+                              {active ? "Detected" : "Clear"}
+                            </div>
+                          </div>
+                          <StatusDot state={active ? "info" : "idle"} />
+                        </div>
+                      );
+                    })}
+                    {climateZones.map((c: any) => {
+                      const temp = c.attributes?.current_temperature;
+                      const hum = c.attributes?.current_humidity;
+                      return (
+                        <div key={c.entity_id} className="panel p-4 flex items-center gap-3">
+                          <Thermometer className="w-4 h-4 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] truncate">{friendly(c)}</div>
+                            <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-0.5 num">
+                              {temp != null ? `${temp}°` : "—"}{hum != null ? ` · ${hum}% RH` : ""}
+                            </div>
+                          </div>
+                          <StatusDot state={c.state === "off" ? "idle" : "active"} />
+                        </div>
+                      );
+                    })}
+                    {roomSensors.map((s: any) => (
+                      <div key={s.entity_id} className="panel p-4 flex items-center gap-3">
+                        <Activity className="w-4 h-4 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] truncate">{friendly(s)}</div>
+                          <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-0.5 num">
+                            {formatVal(s)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {roomCameras.map((cam: any) => (
+                      <div key={cam.entity_id} className="panel p-4 flex items-center gap-3">
+                        <Video className="w-4 h-4 text-foreground-mute shrink-0" strokeWidth={1.5} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] truncate">{friendly(cam)}</div>
+                          <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-0.5">
+                            {cam.state}
+                          </div>
+                        </div>
+                        <StatusDot state={cam.state === "recording" || cam.state === "streaming" ? "info" : "idle"} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })()}
+
+
             {mp && (
               <section>
                 <div className="flex items-baseline justify-between mb-5">
