@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
 
-import { useHa } from "@/lib/ha-client";
+import { useHa, type HaState } from "@/lib/ha-client";
 import { useAuth } from "@/lib/auth";
 import LightingView from "@/components/odin/views/LightingView";
 import ClimateView from "@/components/odin/views/ClimateView";
