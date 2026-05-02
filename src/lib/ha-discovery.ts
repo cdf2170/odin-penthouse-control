@@ -155,7 +155,35 @@ export function useDiscovery() {
       const rCovers = covers.filter(
         (c) => matchRoom(c, room) && c.entity_id !== garageCover?.entity_id,
       );
-      return { room, lights: rLights, scenes: rScenes, occupancy, mediaPlayer, switches: rSwitches, fans: rFans, covers: rCovers };
+      // Sensors in this room
+      const rDoorSensors = doorSensors.filter((s) => matchRoom(s, room));
+      const rMotionSensors = motionSensors.filter((s) => matchRoom(s, room));
+      const rClimates = climates.filter((c) => matchRoom(c, room));
+      const rCameras = cameras.filter((c) => matchRoom(c, room));
+      // Numeric/state sensors with a device_class (temp, humidity, illuminance, etc.)
+      const rSensors = sensors.filter(
+        (s) =>
+          matchRoom(s, room) &&
+          typeof s.attributes?.device_class === "string" &&
+          ["temperature", "humidity", "illuminance", "battery", "power", "energy", "co2", "pm25", "pm10", "voc", "air_quality"].includes(
+            s.attributes.device_class as string,
+          ),
+      );
+      return {
+        room,
+        lights: rLights,
+        scenes: rScenes,
+        occupancy,
+        mediaPlayer,
+        switches: rSwitches,
+        fans: rFans,
+        covers: rCovers,
+        doorSensors: rDoorSensors,
+        motionSensors: rMotionSensors,
+        climates: rClimates,
+        cameras: rCameras,
+        sensors: rSensors,
+      };
     };
 
     // Always show every canonical room — even empty ones so the user can confirm the slot exists
