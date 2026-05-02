@@ -2013,8 +2013,7 @@ const QuickControls = () => {
 
   // Logical flow: lighting → environment → access
   const tiles = [
-    lightsTile("Kitchen", "Kitchen Lights", Lightbulb),
-    lightsTile("Living Room", "Living Room Lights", Lightbulb),
+    lightsTile(["Kitchen", "Living Room"], "Main Lights", Lightbulb, "main-lights"),
     purifierTile,
     garageTile,
     frontDoorTile,
