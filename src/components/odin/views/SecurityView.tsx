@@ -468,9 +468,19 @@ export default function SecurityView() {
                 s.attributes?.device_class === "motion" ||
                 s.attributes?.device_class === "occupancy" ||
                 s.attributes?.device_class === "presence";
+              const isExteriorDoor =
+                s.entity_id === "binary_sensor.front_door_sensor" ||
+                s.entity_id === "binary_sensor.back_door_sensor";
+              const dot: "info" | "alert" | "warn" | "ok" = open
+                ? isMotion
+                  ? "info"
+                  : isExteriorDoor
+                    ? "alert"
+                    : "warn"
+                : "ok";
               return (
                 <li key={s.entity_id} className="flex items-center gap-3 py-2.5">
-                  <StatusDot state={open ? (isMotion ? "active" : "alert") : "ok"} />
+                  <StatusDot state={dot} />
                   <span className="text-[12px] flex-1 truncate text-foreground-dim">
                     {friendly(s)}
                   </span>
