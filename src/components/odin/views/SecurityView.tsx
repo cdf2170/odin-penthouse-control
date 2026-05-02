@@ -365,6 +365,16 @@ export default function SecurityView() {
   const occupiedCount = cards.filter((c) => c.presence?.state === "on").length;
   const openDoors = cards.filter((c) => c.door?.state === "on").length;
 
+  // Only exterior openings affect posture (interior doors being open is normal)
+  const EXTERIOR_ROOMS = new Set(["Front Door", "Back Door"]);
+  const exteriorOpenCards = cards.filter(
+    (c) => EXTERIOR_ROOMS.has(c.binding.name) && c.door?.state === "on",
+  );
+  const garageCover = states["cover.garage_door"];
+  const garageOpen =
+    garageCover?.state === "open" || garageCover?.state === "opening";
+  const exteriorOpenCount = exteriorOpenCards.length + (garageOpen ? 1 : 0);
+
   // Perimeter AI
   const perimeter = PERIMETER_AI.map((p) => ({
     ...p,
