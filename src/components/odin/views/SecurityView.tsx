@@ -37,6 +37,16 @@ const ROOMS: RoomBinding[] = [
     status: "live",
   },
   { name: "Kitchen", status: "future" },
+  {
+    name: "Front Door",
+    door: "binary_sensor.front_door_sensor",
+    status: "live",
+  },
+  {
+    name: "Back Door",
+    door: "binary_sensor.back_door_sensor",
+    status: "live",
+  },
 ];
 
 /* ---------- Room card --------------------------------------------- */
