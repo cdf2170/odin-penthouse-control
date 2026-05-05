@@ -9,28 +9,44 @@ import { useDiscovery, friendly } from "@/lib/ha-discovery";
 import type { HaState } from "@/lib/ha-client";
 
 /* ---------- Room → entity bindings (only live rooms) -------------- */
+type Zone = { id: string; label: string };
 type RoomBinding = {
   name: string;
   door?: string;       // contact / opening sensor
   presence?: string;   // FP2 / Aqara / mmWave presence
+  zones?: Zone[];      // sub-zones (couch, desk, bed, enter/exit, etc.)
   status: "live" | "future";
 };
 
 const ROOMS: RoomBinding[] = [
   {
     name: "Office",
+    door: "binary_sensor.office_door",
     presence: "binary_sensor.office_occupancy",
+    zones: [
+      { id: "binary_sensor.office_desk", label: "Desk" },
+      { id: "binary_sensor.office_zone_lucy", label: "Lucy" },
+      { id: "binary_sensor.office_enter_exit", label: "Enter/Exit" },
+    ],
     status: "live",
   },
   {
     name: "Bedroom",
     door: "binary_sensor.bedroom_door",
     presence: "binary_sensor.bedroom_occupancy",
+    zones: [
+      { id: "binary_sensor.bedroom_bed", label: "Bed" },
+      { id: "binary_sensor.bedroom_enter_exit", label: "Enter/Exit" },
+    ],
     status: "live",
   },
   {
     name: "Living Room",
     presence: "binary_sensor.living_room_occupancy",
+    zones: [
+      { id: "binary_sensor.living_room_couch", label: "Couch" },
+      { id: "binary_sensor.living_room_enter_exit", label: "Enter/Exit" },
+    ],
     status: "live",
   },
   {
@@ -56,10 +72,12 @@ const RoomCard = ({
   binding,
   door,
   presence,
+  zones,
 }: {
   binding: RoomBinding;
   door?: HaState;
   presence?: HaState;
+  zones?: { label: string; state?: HaState }[];
 }) => {
   if (binding.status === "future") {
     return (
@@ -95,6 +113,8 @@ const RoomCard = ({
     : occupied
       ? "info"
       : "ok";
+
+  const activeZones = (zones ?? []).filter((z) => z.state?.state === "on");
 
   return (
     <Panel>
@@ -133,6 +153,38 @@ const RoomCard = ({
           />
         )}
       </div>
+
+      {zones && zones.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-hairline/60">
+          <div className="flex items-center justify-between mb-2">
+            <Label>Zones</Label>
+            <span className="mono text-[9px] uppercase tracking-[0.18em] text-foreground-mute num">
+              {activeZones.length}/{zones.length} active
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {zones.map((z) => {
+              const on = z.state?.state === "on";
+              return (
+                <div
+                  key={z.label}
+                  className={`flex items-center gap-1.5 px-2 py-1 border transition-colors ${
+                    on
+                      ? "border-odin-info/70 text-odin-info"
+                      : "border-hairline text-foreground-mute"
+                  }`}
+                  style={on ? { boxShadow: "0 0 10px hsl(var(--info) / 0.18) inset" } : undefined}
+                >
+                  <StatusDot state={on ? "info" : "idle"} />
+                  <span className="mono text-[10px] uppercase tracking-[0.14em]">
+                    {z.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </Panel>
   );
 };
@@ -366,6 +418,7 @@ export default function SecurityView() {
         binding: b,
         door: b.door ? states[b.door] : undefined,
         presence: b.presence ? states[b.presence] : undefined,
+        zones: b.zones?.map((z) => ({ label: z.label, state: states[z.id] })),
       })),
     [states],
   );
@@ -452,6 +505,7 @@ export default function SecurityView() {
               binding={c.binding}
               door={c.door}
               presence={c.presence}
+              zones={c.zones}
             />
           ))}
         </div>
