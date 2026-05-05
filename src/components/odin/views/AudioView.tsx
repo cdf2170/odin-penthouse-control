@@ -17,9 +17,17 @@ export default function AudioView() {
   const { mediaPlayers } = useDiscovery();
   const [activeIdx, setActiveIdx] = useState(0);
 
+  const ALLOWED = new Set([
+    "media_player.living_room_speakers",
+    "media_player.bedroom_speaker",
+    "media_player.spotify",
+  ]);
+
   const speakers = useMemo(
     () =>
-      mediaPlayers.map((mp) => {
+      mediaPlayers
+        .filter((mp) => ALLOWED.has(mp.entity_id))
+        .map((mp) => {
         const a = mp.attributes ?? {};
         return {
           entity: mp.entity_id,
