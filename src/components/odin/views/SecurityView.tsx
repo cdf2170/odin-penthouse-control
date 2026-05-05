@@ -72,10 +72,12 @@ const RoomCard = ({
   binding,
   door,
   presence,
+  zones,
 }: {
   binding: RoomBinding;
   door?: HaState;
   presence?: HaState;
+  zones?: { label: string; state?: HaState }[];
 }) => {
   if (binding.status === "future") {
     return (
@@ -111,6 +113,8 @@ const RoomCard = ({
     : occupied
       ? "info"
       : "ok";
+
+  const activeZones = (zones ?? []).filter((z) => z.state?.state === "on");
 
   return (
     <Panel>
@@ -149,6 +153,38 @@ const RoomCard = ({
           />
         )}
       </div>
+
+      {zones && zones.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-hairline/60">
+          <div className="flex items-center justify-between mb-2">
+            <Label>Zones</Label>
+            <span className="mono text-[9px] uppercase tracking-[0.18em] text-foreground-mute num">
+              {activeZones.length}/{zones.length} active
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {zones.map((z) => {
+              const on = z.state?.state === "on";
+              return (
+                <div
+                  key={z.label}
+                  className={`flex items-center gap-1.5 px-2 py-1 border transition-colors ${
+                    on
+                      ? "border-odin-info/70 text-odin-info"
+                      : "border-hairline text-foreground-mute"
+                  }`}
+                  style={on ? { boxShadow: "0 0 10px hsl(var(--info) / 0.18) inset" } : undefined}
+                >
+                  <StatusDot state={on ? "info" : "idle"} />
+                  <span className="mono text-[10px] uppercase tracking-[0.14em]">
+                    {z.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </Panel>
   );
 };
