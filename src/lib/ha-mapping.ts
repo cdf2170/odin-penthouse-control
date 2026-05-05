@@ -210,7 +210,7 @@ export const haMap = {
     movie_mode_on: "automation.living_room_movie_mode_on",
     movie_mode_off: "automation.living_room_movie_mode_off",
   },
-  voice_satellites: [],
+  voice_satellites: [] as { name: string; entity: string }[],
 } as const;
 
 export type HaMap = typeof haMap;
