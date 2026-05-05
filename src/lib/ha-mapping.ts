@@ -69,7 +69,7 @@ export const haMap = {
       },
       occupancy: "binary_sensor.office_occupancy",
     },
-    Bathroom: {
+    "Upstairs Bathroom": {
       lights: [
         "light.bathroom",
         "light.bathroom_light_strip",
@@ -78,6 +78,11 @@ export const haMap = {
         Nightlight: "scene.bathroom_lights_tropical_twilight",
       },
       occupancy: "binary_sensor.bathroom_occupancy",
+    },
+    "Lower Bath": {
+      lights: [],
+      scenes: {},
+      occupancy: "",
     },
   },
   presence_zones: {
