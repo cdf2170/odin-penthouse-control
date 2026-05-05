@@ -186,6 +186,7 @@ const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
 
 import { useEntity } from "@/lib/ha-client";
 import { useDiscovery, friendly, isOn } from "@/lib/ha-discovery";
+import { setActiveScene, clearActiveScene, useActiveScene } from "@/lib/active-scenes";
 
 type RoomLive = ReturnType<typeof useDiscovery>["rooms"][number];
 
@@ -209,6 +210,7 @@ const RoomPanel = ({
   const occupied = room.occupancy?.state === "on";
   const playing = room.mediaPlayer?.state === "playing";
   const anyOn = onLights.length > 0;
+  const activeScene = useActiveScene(room.room);
 
   // Build a minimal stat line — only show what's actually happening
   const stats: string[] = [];
@@ -232,6 +234,20 @@ const RoomPanel = ({
           <div className="label mt-1.5 truncate">
             {occupied ? "Occupied" : "Vacant"}
           </div>
+          {activeScene && (
+            <div
+              className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 border border-odin-accent/60 bg-odin-accent/5"
+              style={{ boxShadow: "0 0 12px hsl(var(--accent) / 0.2) inset" }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-odin-accent"
+                style={{ boxShadow: "0 0 6px hsl(var(--accent))" }}
+              />
+              <span className="mono text-[9px] uppercase tracking-[0.18em] text-odin-accent truncate max-w-[140px]">
+                {activeScene.sceneName}
+              </span>
+            </div>
+          )}
         </div>
         <ChevronRight
           className="w-4 h-4 text-foreground-mute group-hover:text-odin-accent transition-colors shrink-0 mt-0.5"
@@ -345,6 +361,7 @@ const RoomDetailsTray = ({
   onClose: () => void;
 }) => {
   const { callService, states } = useHa();
+  const activeScene = useActiveScene(room?.room ?? "");
   if (!room) return null;
 
   const onLights = room.lights.filter(isOn);
@@ -359,25 +376,35 @@ const RoomDetailsTray = ({
 
   const occupied = room.occupancy?.state === "on";
 
-  const toggleAll = () =>
+  const toggleAll = () => {
+    clearActiveScene(room.room);
     callService("light", anyOn ? "turn_off" : "turn_on", {
       entity_id: room.lights.map((l) => l.entity_id),
     });
+  };
 
-  const setMasterLevel = (pct: number) =>
+  const setMasterLevel = (pct: number) => {
+    clearActiveScene(room.room);
     callService("light", "turn_on", {
       entity_id: room.lights.map((l) => l.entity_id),
       brightness_pct: pct,
     });
+  };
 
-  const toggleOne = (entity_id: string, on: boolean) =>
+  const toggleOne = (entity_id: string, on: boolean) => {
+    clearActiveScene(room.room);
     callService("light", on ? "turn_off" : "turn_on", { entity_id });
+  };
 
-  const setLevel = (entity_id: string, pct: number) =>
+  const setLevel = (entity_id: string, pct: number) => {
+    clearActiveScene(room.room);
     callService("light", "turn_on", { entity_id, brightness_pct: pct });
+  };
 
-  const engageScene = (entity: string) =>
+  const engageScene = (entity: string, name: string) => {
+    setActiveScene(room.room, entity, name);
     callService("scene", "turn_on", { entity_id: entity });
+  };
 
   const mp = room.mediaPlayer;
   const mpVol = mp ? Math.round(((mp.attributes?.volume_level as number) ?? 0) * 100) : 0;
@@ -431,20 +458,23 @@ const RoomDetailsTray = ({
                   </span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {room.scenes.map((s) => (
+                  {room.scenes.map((s) => {
+                    const isActive = activeScene?.sceneEntity === s.entity;
+                    return (
                     <button
                       key={s.entity}
-                      onClick={() => engageScene(s.entity)}
-                      className="group panel p-5 text-left transition-colors hover:border-odin-accent"
+                      onClick={() => engageScene(s.entity, s.name)}
+                      className={`group panel p-5 text-left transition-colors ${isActive ? "border-odin-accent bg-odin-accent/5" : "hover:border-odin-accent"}`}
+                      style={isActive ? { boxShadow: "0 0 24px hsl(var(--accent) / 0.25) inset" } : undefined}
                     >
-                      <div className="text-[10px] mono uppercase tracking-[0.24em] text-foreground-mute mb-3 group-hover:text-odin-accent transition-colors">
-                        Scene
+                      <div className={`text-[10px] mono uppercase tracking-[0.24em] mb-3 transition-colors ${isActive ? "text-odin-accent" : "text-foreground-mute group-hover:text-odin-accent"}`}>
+                        {isActive ? "● Active Scene" : "Scene"}
                       </div>
                       <div className="text-[15px] font-medium tracking-[0.02em] truncate">
                         {s.name}
                       </div>
                     </button>
-                  ))}
+                  );})}
                 </div>
               </section>
             )}
