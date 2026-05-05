@@ -359,25 +359,35 @@ const RoomDetailsTray = ({
 
   const occupied = room.occupancy?.state === "on";
 
-  const toggleAll = () =>
+  const toggleAll = () => {
+    clearActiveScene(room.room);
     callService("light", anyOn ? "turn_off" : "turn_on", {
       entity_id: room.lights.map((l) => l.entity_id),
     });
+  };
 
-  const setMasterLevel = (pct: number) =>
+  const setMasterLevel = (pct: number) => {
+    clearActiveScene(room.room);
     callService("light", "turn_on", {
       entity_id: room.lights.map((l) => l.entity_id),
       brightness_pct: pct,
     });
+  };
 
-  const toggleOne = (entity_id: string, on: boolean) =>
+  const toggleOne = (entity_id: string, on: boolean) => {
+    clearActiveScene(room.room);
     callService("light", on ? "turn_off" : "turn_on", { entity_id });
+  };
 
-  const setLevel = (entity_id: string, pct: number) =>
+  const setLevel = (entity_id: string, pct: number) => {
+    clearActiveScene(room.room);
     callService("light", "turn_on", { entity_id, brightness_pct: pct });
+  };
 
-  const engageScene = (entity: string) =>
+  const engageScene = (entity: string, name: string) => {
+    setActiveScene(room.room, entity, name);
     callService("scene", "turn_on", { entity_id: entity });
+  };
 
   const mp = room.mediaPlayer;
   const mpVol = mp ? Math.round(((mp.attributes?.volume_level as number) ?? 0) * 100) : 0;
