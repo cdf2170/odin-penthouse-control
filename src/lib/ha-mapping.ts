@@ -79,7 +79,7 @@ export const haMap = {
       },
       occupancy: "binary_sensor.bathroom_occupancy",
     },
-    "Lower Bath": {
+    "Lower Bathroom": {
       lights: [],
       scenes: {},
       occupancy: "",

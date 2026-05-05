@@ -108,7 +108,7 @@ export function useDiscovery() {
     const ALLOWED_ROOMS = [
       "Living Room",
       "Kitchen",
-      "Lower Bath",
+      "Lower Bathroom",
       "Bedroom",
       "Upstairs Bathroom",
       "Office",
