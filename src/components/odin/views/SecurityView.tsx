@@ -535,7 +535,7 @@ export default function SecurityView() {
                 <li key={s.entity_id} className="flex items-center gap-3 py-2.5">
                   <StatusDot state={dot} />
                   <span className="text-[12px] flex-1 truncate text-foreground-dim">
-                    {friendly(s)}
+                    {friendly(s).replace(/\s*Contact\s*$/i, "")}
                   </span>
                   <span className="mono text-[10px] uppercase tracking-[0.14em] text-foreground-mute w-20 text-right">
                     {isMotion ? (open ? "Active" : "Clear") : open ? "Opened" : "Closed"}
