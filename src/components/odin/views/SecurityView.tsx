@@ -9,28 +9,44 @@ import { useDiscovery, friendly } from "@/lib/ha-discovery";
 import type { HaState } from "@/lib/ha-client";
 
 /* ---------- Room → entity bindings (only live rooms) -------------- */
+type Zone = { id: string; label: string };
 type RoomBinding = {
   name: string;
   door?: string;       // contact / opening sensor
   presence?: string;   // FP2 / Aqara / mmWave presence
+  zones?: Zone[];      // sub-zones (couch, desk, bed, enter/exit, etc.)
   status: "live" | "future";
 };
 
 const ROOMS: RoomBinding[] = [
   {
     name: "Office",
+    door: "binary_sensor.office_door",
     presence: "binary_sensor.office_occupancy",
+    zones: [
+      { id: "binary_sensor.office_desk", label: "Desk" },
+      { id: "binary_sensor.office_zone_lucy", label: "Lucy" },
+      { id: "binary_sensor.office_enter_exit", label: "Enter/Exit" },
+    ],
     status: "live",
   },
   {
     name: "Bedroom",
     door: "binary_sensor.bedroom_door",
     presence: "binary_sensor.bedroom_occupancy",
+    zones: [
+      { id: "binary_sensor.bedroom_bed", label: "Bed" },
+      { id: "binary_sensor.bedroom_enter_exit", label: "Enter/Exit" },
+    ],
     status: "live",
   },
   {
     name: "Living Room",
     presence: "binary_sensor.living_room_occupancy",
+    zones: [
+      { id: "binary_sensor.living_room_couch", label: "Couch" },
+      { id: "binary_sensor.living_room_enter_exit", label: "Enter/Exit" },
+    ],
     status: "live",
   },
   {
