@@ -1359,15 +1359,15 @@ const Security = () => {
   const armState = alarm?.state ?? "unknown";
   const armed = armState.startsWith("armed");
   const EXTERIOR_IDS = new Set([
-    "binary_sensor.front_door_sensor",
-    "binary_sensor.back_door_sensor",
+    "binary_sensor.front_door_contact",
+    "binary_sensor.back_door",
   ]);
   const doorsOnly = doorSensors.filter(
     (s) => s.attributes?.device_class === "door" || /door/i.test(friendly(s)),
   );
   const exteriorOrder = (id: string) => {
-    if (id === "binary_sensor.front_door_sensor") return 0;
-    if (id === "binary_sensor.back_door_sensor") return 1;
+    if (id === "binary_sensor.front_door_contact") return 0;
+    if (id === "binary_sensor.back_door") return 1;
     return 2; // garage last
   };
   const exteriorDoors = doorsOnly.filter((s) => EXTERIOR_IDS.has(s.entity_id));
@@ -1951,17 +1951,17 @@ const narrate = (s: HaState): { icon: any; text: string } | null => {
   }
 
   // Doors
-  if (id === "binary_sensor.front_door_sensor" && st === "on")
+  if (id === "binary_sensor.front_door_contact" && st === "on")
     return { icon: DoorClosed, text: "Front door opened" };
-  if (id === "binary_sensor.back_door_sensor" && st === "on")
+  if (id === "binary_sensor.back_door" && st === "on")
     return { icon: DoorClosed, text: "Back door opened" };
 
   // Front door camera events
   if (id === "binary_sensor.front_door_motion" && st === "on")
     return { icon: Activity, text: "Motion detected · Front Door" };
-  if (id === "binary_sensor.front_door_person" && st === "on")
+  if (id === "binary_sensor.front_door_person_detected" && st === "on")
     return { icon: Fingerprint, text: "Person at front door" };
-  if (id === "binary_sensor.front_door_vehicle" && st === "on")
+  if (id === "binary_sensor.front_door_vehicle_detected" && st === "on")
     return { icon: Car, text: "Vehicle at front door" };
 
   // Scripts

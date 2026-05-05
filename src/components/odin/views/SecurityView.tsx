@@ -42,12 +42,12 @@ const ROOMS: RoomBinding[] = [
   { name: "Kitchen", status: "future" },
   {
     name: "Front Door",
-    door: "binary_sensor.front_door_sensor",
+    door: "binary_sensor.front_door_contact",
     status: "live",
   },
   {
     name: "Back Door",
-    door: "binary_sensor.back_door_sensor",
+    door: "binary_sensor.back_door",
     status: "live",
   },
 ];
@@ -235,10 +235,10 @@ type Posture = {
 };
 
 const PERIMETER_AI = [
-  { id: "binary_sensor.front_door_person",  label: "Person",  icon: UserRound },
-  { id: "binary_sensor.front_door_vehicle", label: "Vehicle", icon: Car },
-  { id: "binary_sensor.front_door_pet",     label: "Pet",     icon: PawPrint },
-  { id: "binary_sensor.front_door_visitor", label: "Visitor", icon: Bell },
+  { id: "binary_sensor.front_door_person_detected",  label: "Person",  icon: UserRound },
+  { id: "binary_sensor.front_door_vehicle_detected", label: "Vehicle", icon: Car },
+  { id: "binary_sensor.front_door_pet_detected",     label: "Pet",     icon: PawPrint },
+  { id: "binary_sensor.front_door_visitor_detected", label: "Visitor", icon: Bell },
   { id: "binary_sensor.front_door_motion",  label: "Motion",  icon: Radio },
 ];
 
@@ -394,9 +394,9 @@ export default function SecurityView() {
     (p) => p.active && (p.label === "Person" || p.label === "Visitor" || p.label === "Vehicle"),
   );
 
-  const doorbell = states["camera.front_door_fluent"];
+  const doorbell = states["camera.front_door"];
   const doorbellOnline = !!doorbell && doorbell.state !== "unavailable";
-  const siren = states["siren.front_door_siren"];
+  const siren = states["siren.front_door"];
   const sirenReady = !!siren && siren.state !== "unavailable";
 
   // Recent events — last 5 changes across door + presence sensors
@@ -469,8 +469,8 @@ export default function SecurityView() {
                 s.attributes?.device_class === "occupancy" ||
                 s.attributes?.device_class === "presence";
               const isExteriorDoor =
-                s.entity_id === "binary_sensor.front_door_sensor" ||
-                s.entity_id === "binary_sensor.back_door_sensor";
+                s.entity_id === "binary_sensor.front_door_contact" ||
+                s.entity_id === "binary_sensor.back_door";
               const dot: "info" | "alert" | "warn" | "ok" = open
                 ? isMotion
                   ? "info"
