@@ -135,7 +135,7 @@ const RoomCard = ({
         {door && (
           <Row
             icon={DoorClosed}
-            label={friendly(door)}
+            label={friendly(door).replace(/\s*Contact\s*$/i, "")}
             on={doorOpen}
             onText="OPEN"
             offText="CLOSED"
