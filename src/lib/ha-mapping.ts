@@ -119,6 +119,7 @@ export const haMap = {
       { name: "Back Door", entity: "binary_sensor.back_door" },
       { name: "Bedroom Door", entity: "binary_sensor.bedroom_door" },
       { name: "Bathroom Door", entity: "binary_sensor.bathroom_door" },
+      { name: "Office Door", entity: "binary_sensor.office_door" },
       { name: "Front Door Person", entity: "binary_sensor.front_door_person_detected" },
       { name: "Front Door Vehicle", entity: "binary_sensor.front_door_vehicle_detected" },
       { name: "Front Door Pet", entity: "binary_sensor.front_door_pet_detected" },
