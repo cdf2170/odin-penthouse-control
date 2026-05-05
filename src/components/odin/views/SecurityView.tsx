@@ -19,27 +19,27 @@ type RoomBinding = {
 const ROOMS: RoomBinding[] = [
   {
     name: "Office",
-    door: "binary_sensor.office_door_sensor",
-    presence: "binary_sensor.office_presence_sensor_presence_sensor_1",
+    door: "binary_sensor.office_enter_exit",
+    presence: "binary_sensor.office_occupancy",
     status: "live",
   },
   {
     name: "Bedroom",
-    door: "binary_sensor.bedroom_door_sensor",
-    presence: "binary_sensor.presence_sensor_bedroom_presence_sensor_1",
+    door: "binary_sensor.bedroom_door",
+    presence: "binary_sensor.bedroom_occupancy",
     status: "live",
   },
   {
     name: "Living Room",
-    presence: "binary_sensor.presence_sensor_fp2_6426_presence_sensor_1",
+    presence: "binary_sensor.living_room_occupancy",
     status: "live",
   },
   {
     name: "Bathroom",
-    door: "binary_sensor.bathroom_door_sensor",
+    door: "binary_sensor.bathroom_door",
+    presence: "binary_sensor.bathroom_occupancy",
     status: "live",
   },
-  { name: "Kitchen", status: "future" },
   {
     name: "Front Door",
     door: "binary_sensor.front_door_contact",
