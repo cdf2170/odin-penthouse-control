@@ -346,6 +346,7 @@ const RoomDetailsTray = ({
   onClose: () => void;
 }) => {
   const { callService, states } = useHa();
+  const activeScene = useActiveScene(room?.room ?? "");
   if (!room) return null;
 
   const onLights = room.lights.filter(isOn);
