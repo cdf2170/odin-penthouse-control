@@ -186,6 +186,7 @@ const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
 
 import { useEntity } from "@/lib/ha-client";
 import { useDiscovery, friendly, isOn } from "@/lib/ha-discovery";
+import { setActiveScene, clearActiveScene, useActiveScene } from "@/lib/active-scenes";
 
 type RoomLive = ReturnType<typeof useDiscovery>["rooms"][number];
 
