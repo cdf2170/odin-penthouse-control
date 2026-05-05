@@ -1445,7 +1445,19 @@ const Security = () => {
   }
   exterior.sort((a, b) => exteriorOrder(a.id) - exteriorOrder(b.id));
 
-  const interior = doorsOnly.filter((s) => !EXTERIOR_IDS.has(s.entity_id));
+  const interiorRaw = doorsOnly.filter((s) => !EXTERIOR_IDS.has(s.entity_id));
+  const seenNames = new Set<string>();
+  const interior = interiorRaw.filter((s) => {
+    const key = friendly(s)
+      .replace(/\bsensors?\b/gi, "")
+      .replace(/\bcontact\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+      .toLowerCase();
+    if (seenNames.has(key)) return false;
+    seenNames.add(key);
+    return true;
+  });
 
   const renderExterior = (e: (typeof exterior)[number]) => (
     <div
