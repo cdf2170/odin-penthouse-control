@@ -234,6 +234,20 @@ const RoomPanel = ({
           <div className="label mt-1.5 truncate">
             {occupied ? "Occupied" : "Vacant"}
           </div>
+          {activeScene && (
+            <div
+              className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 border border-odin-accent/60 bg-odin-accent/5"
+              style={{ boxShadow: "0 0 12px hsl(var(--accent) / 0.2) inset" }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-odin-accent"
+                style={{ boxShadow: "0 0 6px hsl(var(--accent))" }}
+              />
+              <span className="mono text-[9px] uppercase tracking-[0.18em] text-odin-accent truncate max-w-[140px]">
+                {activeScene.sceneName}
+              </span>
+            </div>
+          )}
         </div>
         <ChevronRight
           className="w-4 h-4 text-foreground-mute group-hover:text-odin-accent transition-colors shrink-0 mt-0.5"
