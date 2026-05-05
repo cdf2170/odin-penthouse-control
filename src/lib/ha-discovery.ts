@@ -106,9 +106,10 @@ export function useDiscovery() {
     // Fixed canonical room list — no auto-discovery to avoid duplicates like "Kitchen" vs "Kitchen All"
     const ALLOWED_ROOMS = [
       "Living Room",
-      "Bedroom",
       "Kitchen",
-      "Bathroom",
+      "Lower Bath",
+      "Bedroom",
+      "Upstairs Bathroom",
       "Office",
     ];
 
