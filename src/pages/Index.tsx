@@ -2593,7 +2593,7 @@ const OverviewView = () => {
         {rooms.length > 0 && (
           <div>
             <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP A ROOM TO CONTROL`} />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 auto-rows-fr gap-4">
               {rooms.map((r, i) => (
                 <RoomPanel
                   key={r.room}
