@@ -219,106 +219,6 @@ const RoomPanel = ({
   if (room.scenes.length > 0) stats.push(`${room.scenes.length} scenes`);
   const idleLabel = room.lights.length === 0 ? "No fixtures" : "Quiet";
 
-  // Hero variant — featured room with ambient light visualization
-  if (accent) {
-    // Convert avg brightness to a warm glow intensity
-    const glowIntensity = anyOn ? Math.max(0.15, avgLevel / 100) : 0;
-    const glowColor = playing
-      ? "var(--accent)"
-      : anyOn
-        ? "28 80% 55%"
-        : "var(--accent)";
-    return (
-      <button
-        onClick={onOpenDetails}
-        aria-label={`Open ${room.room} controls`}
-        className="panel relative col-span-2 row-span-2 p-7 text-left w-full overflow-hidden transition-colors hover:border-odin-accent group min-h-[260px]"
-      >
-        {/* Ambient light field — pulses warmer when lights are on */}
-        <div
-          className="absolute inset-0 pointer-events-none transition-opacity duration-700"
-          style={{
-            opacity: glowIntensity,
-            background: anyOn
-              ? `radial-gradient(circle at 70% 30%, hsl(${glowColor} / 0.45) 0%, transparent 65%)`
-              : "none",
-          }}
-        />
-        {/* Subtle scanline overlay for that "command center" feel */}
-        <div className="absolute inset-0 scanline pointer-events-none opacity-40" />
-
-        <div className="relative h-full flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="mono text-[9px] uppercase tracking-[0.3em] text-foreground-mute">
-                Featured Room
-              </span>
-              <StatusDot state={occupied ? "info" : "idle"} />
-            </div>
-            <h3 className="text-[34px] font-light tracking-[-0.01em] leading-none">
-              {room.room}
-            </h3>
-            <div className="mono text-[10px] uppercase tracking-[0.2em] text-foreground-mute mt-3 num">
-              {occupied ? "Occupied" : "Vacant"}
-              {anyOn ? ` · ${onLights.length}/${room.lights.length} fixtures` : ""}
-              {playing ? " · Audio live" : ""}
-            </div>
-            {activeScene && (
-              <div
-                className="mt-4 inline-flex items-center gap-2 px-2.5 py-1.5 border border-odin-accent/60 bg-odin-accent/5"
-                style={{ boxShadow: "0 0 16px hsl(var(--accent) / 0.25) inset" }}
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full bg-odin-accent animate-pulse"
-                  style={{ boxShadow: "0 0 8px hsl(var(--accent))" }}
-                />
-                <span className="mono text-[10px] uppercase tracking-[0.2em] text-odin-accent">
-                  {activeScene.sceneName}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Big brightness gauge */}
-          <div className="space-y-2.5">
-            <div className="flex items-baseline justify-between">
-              <span className="mono text-[9px] uppercase tracking-[0.22em] text-foreground-mute">
-                Ambient Level
-              </span>
-              <span className="mono text-[28px] num leading-none text-foreground">
-                {anyOn ? avgLevel : 0}
-                <span className="text-[12px] text-foreground-mute ml-1">%</span>
-              </span>
-            </div>
-            <div className="h-[2px] bg-surface-inset relative overflow-hidden">
-              <div
-                className="h-full transition-[width] duration-500"
-                style={{
-                  width: `${anyOn ? avgLevel : 0}%`,
-                  background:
-                    "linear-gradient(90deg, hsl(var(--accent-dim)), hsl(var(--accent)))",
-                  boxShadow: anyOn
-                    ? "0 0 12px hsl(var(--accent) / 0.7)"
-                    : "none",
-                }}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="mono text-[9px] uppercase tracking-[0.18em] text-foreground-mute truncate">
-                {stats.length > 0 ? stats.join(" · ") : idleLabel}
-              </span>
-              <ChevronRight
-                className="w-4 h-4 text-foreground-mute group-hover:text-odin-accent transition-colors"
-                strokeWidth={1.5}
-              />
-            </div>
-          </div>
-        </div>
-      </button>
-    );
-  }
-
-  // Compact variant — refined tile for satellite rooms
   return (
     <button
       onClick={onOpenDetails}
@@ -2593,7 +2493,7 @@ const OverviewView = () => {
         {rooms.length > 0 && (
           <div>
             <SectionHead title="Rooms" meta={`${rooms.length} ZONES · TAP A ROOM TO CONTROL`} />
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 auto-rows-fr gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {rooms.map((r, i) => (
                 <RoomPanel
                   key={r.room}
