@@ -442,20 +442,23 @@ const RoomDetailsTray = ({
                   </span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {room.scenes.map((s) => (
+                  {room.scenes.map((s) => {
+                    const isActive = activeScene?.sceneEntity === s.entity;
+                    return (
                     <button
                       key={s.entity}
-                      onClick={() => engageScene(s.entity)}
-                      className="group panel p-5 text-left transition-colors hover:border-odin-accent"
+                      onClick={() => engageScene(s.entity, s.name)}
+                      className={`group panel p-5 text-left transition-colors ${isActive ? "border-odin-accent bg-odin-accent/5" : "hover:border-odin-accent"}`}
+                      style={isActive ? { boxShadow: "0 0 24px hsl(var(--accent) / 0.25) inset" } : undefined}
                     >
-                      <div className="text-[10px] mono uppercase tracking-[0.24em] text-foreground-mute mb-3 group-hover:text-odin-accent transition-colors">
-                        Scene
+                      <div className={`text-[10px] mono uppercase tracking-[0.24em] mb-3 transition-colors ${isActive ? "text-odin-accent" : "text-foreground-mute group-hover:text-odin-accent"}`}>
+                        {isActive ? "● Active Scene" : "Scene"}
                       </div>
                       <div className="text-[15px] font-medium tracking-[0.02em] truncate">
                         {s.name}
                       </div>
                     </button>
-                  ))}
+                  );})}
                 </div>
               </section>
             )}
