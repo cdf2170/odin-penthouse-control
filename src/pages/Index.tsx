@@ -360,7 +360,6 @@ const RoomDetailsTray = ({
     : 0;
 
   const occupied = room.occupancy?.state === "on";
-  const activeScene = useActiveScene(room.room);
 
   const toggleAll = () => {
     clearActiveScene(room.room);
