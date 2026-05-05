@@ -19,7 +19,6 @@ type RoomBinding = {
 const ROOMS: RoomBinding[] = [
   {
     name: "Office",
-    door: "binary_sensor.office_enter_exit",
     presence: "binary_sensor.office_occupancy",
     status: "live",
   },
