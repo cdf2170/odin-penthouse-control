@@ -505,6 +505,7 @@ export default function SecurityView() {
               binding={c.binding}
               door={c.door}
               presence={c.presence}
+              zones={c.zones}
             />
           ))}
         </div>
