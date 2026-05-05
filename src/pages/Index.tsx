@@ -210,6 +210,7 @@ const RoomPanel = ({
   const occupied = room.occupancy?.state === "on";
   const playing = room.mediaPlayer?.state === "playing";
   const anyOn = onLights.length > 0;
+  const activeScene = useActiveScene(room.room);
 
   // Build a minimal stat line — only show what's actually happening
   const stats: string[] = [];
