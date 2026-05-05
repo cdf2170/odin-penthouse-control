@@ -418,6 +418,7 @@ export default function SecurityView() {
         binding: b,
         door: b.door ? states[b.door] : undefined,
         presence: b.presence ? states[b.presence] : undefined,
+        zones: b.zones?.map((z) => ({ label: z.label, state: states[z.id] })),
       })),
     [states],
   );
