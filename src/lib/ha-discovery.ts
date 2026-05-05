@@ -15,7 +15,8 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 // Aliases — additional fragments that should also match a canonical room name
 const ROOM_ALIASES: Record<string, string[]> = {
-  "Bathroom": ["bathroom", "bathroomlightstrip", "bathroommotionsensor"],
+  "Upstairs Bathroom": ["bathroom", "bathroomlightstrip", "bathroommotionsensor", "upstairsbathroom"],
+  "Lower Bath": ["lowerbath", "lowerbathroom", "downstairsbathroom", "halfbath"],
   "Living Room": ["livingroom", "living", "lounge", "familyroom"],
   "Bedroom": ["bedroom", "masterbedroom", "primarybedroom"],
   "Kitchen": ["kitchen"],
@@ -106,9 +107,10 @@ export function useDiscovery() {
     // Fixed canonical room list — no auto-discovery to avoid duplicates like "Kitchen" vs "Kitchen All"
     const ALLOWED_ROOMS = [
       "Living Room",
-      "Bedroom",
       "Kitchen",
-      "Bathroom",
+      "Lower Bath",
+      "Bedroom",
+      "Upstairs Bathroom",
       "Office",
     ];
 
