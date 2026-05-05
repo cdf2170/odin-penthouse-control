@@ -100,7 +100,14 @@ const RoomCard = ({
     );
   }
 
-  const doorOpen = door?.state === "on";
+  // Some contact sensors report inverted (on = closed). Flip those here.
+  const INVERTED_DOOR_IDS = new Set(["binary_sensor.office_door"]);
+  const rawOn = door?.state === "on";
+  const doorOpen = door
+    ? INVERTED_DOOR_IDS.has(door.entity_id)
+      ? !rawOn
+      : rawOn
+    : false;
   const occupied = presence?.state === "on";
   const isExterior =
     binding.name === "Front Door" || binding.name === "Back Door";
