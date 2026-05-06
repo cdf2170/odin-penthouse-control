@@ -1473,10 +1473,8 @@ const Security = () => {
     </div>
   );
 
-  const INVERTED_DOOR_IDS = new Set(["binary_sensor.office_door"]);
   const renderInterior = (s: (typeof doorsOnly)[number]) => {
-    const raw = s.state === "on";
-    const open = INVERTED_DOOR_IDS.has(s.entity_id) ? !raw : raw;
+    const open = s.state === "on";
     const name =
       friendly(s).replace(/\bsensors?\b/gi, "").replace(/\s{2,}/g, " ").trim() ||
       friendly(s);
