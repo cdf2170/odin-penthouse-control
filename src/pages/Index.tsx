@@ -141,7 +141,7 @@ const LeftRail = ({ view, setView, onNavigate }: { view: ViewKey; setView: (v: V
   );
 };
 
-const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
+const TopBar = ({ now, view, onMenuClick }: { now: Date; view: ViewKey; onMenuClick?: () => void }) => {
   const time = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
   const date = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const { states, connected, error } = useHa();
