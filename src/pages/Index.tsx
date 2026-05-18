@@ -4,8 +4,9 @@ import {
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, VolumeX, Volume1, Wind, Car, X, Pencil, EyeOff, Eye, Check,
-  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft, HeartPulse
+  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft, HeartPulse, Menu
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
