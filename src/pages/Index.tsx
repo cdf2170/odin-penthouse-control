@@ -161,27 +161,37 @@ const TopBar = ({ now, view, onMenuClick }: { now: Date; view: ViewKey; onMenuCl
     : { text: "All Systems Nominal", cls: "text-foreground-mute" };
 
   return (
-    <header className="h-16 border-b border-hairline px-8 flex items-center justify-between bg-surface-inset/40">
-      <div className="flex items-baseline gap-6">
-        <h1 className="text-[18px] font-medium tracking-[0.04em]">{view}</h1>
-        <span className={`text-[12px] uppercase tracking-[0.18em] ${systemStatus.cls}`}>{systemStatus.text}</span>
+    <header className="h-14 md:h-16 border-b border-hairline px-4 md:px-8 flex items-center justify-between bg-surface-inset/40 gap-3">
+      <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="md:hidden w-9 h-9 -ml-1 grid place-items-center border border-hairline-strong shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        )}
+        <h1 className="text-[15px] md:text-[18px] font-medium tracking-[0.04em] truncate">{view}</h1>
+        <span className={`hidden sm:inline text-[12px] uppercase tracking-[0.18em] ${systemStatus.cls}`}>{systemStatus.text}</span>
       </div>
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-4 md:gap-8 shrink-0">
+        <div className="hidden md:flex items-center gap-2.5">
           <Sun className="w-4 h-4 text-foreground-dim" strokeWidth={1.5} />
           <span className="mono text-[12px] text-foreground-dim num">
             {wTemp != null ? `${Math.round(wTemp)}${wUnit} EXT · ${wCond.toUpperCase()}` : "WEATHER UNAVAIL"}
           </span>
         </div>
         <div className="text-right">
-          <div className="mono text-[15px] num leading-none">{time}</div>
-          <div className="label mt-1">{date}</div>
+          <div className="mono text-[13px] md:text-[15px] num leading-none">{time}</div>
+          <div className="label mt-1 hidden sm:block">{date}</div>
         </div>
-        <div className="w-9 h-9 border border-hairline-strong grid place-items-center">
+        <div className="hidden md:grid w-9 h-9 border border-hairline-strong place-items-center">
           <Fingerprint className="w-4 h-4 text-foreground-dim" strokeWidth={1.5} />
         </div>
       </div>
     </header>
+
   );
 };
 
