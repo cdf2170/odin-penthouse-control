@@ -2550,6 +2550,7 @@ const OverviewView = () => {
 const Index = () => {
   const [now, setNow] = useState(new Date());
   const [view, setView] = useState<ViewKey>("Overview");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -2558,11 +2559,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      <LeftRail view={view} setView={setView} />
+      <div className="hidden md:flex">
+        <LeftRail view={view} setView={setView} />
+      </div>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent side="left" className="p-0 w-[260px] bg-surface-inset border-r border-hairline">
+          <LeftRail view={view} setView={setView} onNavigate={() => setMenuOpen(false)} />
+        </SheetContent>
+      </Sheet>
       <main className="flex-1 flex flex-col min-w-0">
-        <TopBar now={now} view={view} />
+        <TopBar now={now} view={view} onMenuClick={() => setMenuOpen(true)} />
         {view === "Overview" ? <OverviewView /> : (
-          <div className="flex-1 overflow-auto p-8">
+          <div className="flex-1 overflow-auto p-4 md:p-8">
             {view === "Lighting" && <LightingView />}
             {view === "Climate" && <ClimateView />}
             {view === "Security" && <SecurityView />}
@@ -2578,5 +2586,6 @@ const Index = () => {
     </div>
   );
 };
+
 
 export default Index;
