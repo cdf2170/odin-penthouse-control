@@ -36,12 +36,14 @@ const navItems: { icon: any; label: ViewKey }[] = [
   { icon: HeartPulse, label: "Health" },
 ];
 
-const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => {
+const LeftRail = ({ view, setView, onNavigate }: { view: ViewKey; setView: (v: ViewKey) => void; onNavigate?: () => void }) => {
   const { connected, error, states } = useHa();
   const { user, signOut } = useAuth();
   const entityCount = Object.keys(states).length;
+  const pick = (v: ViewKey) => { setView(v); onNavigate?.(); };
   return (
-  <aside className="w-[232px] shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
+  <aside className="w-full md:w-[232px] h-full shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
+
     <div className="px-6 pt-7 pb-8">
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 grid place-items-center border border-hairline-strong relative">
