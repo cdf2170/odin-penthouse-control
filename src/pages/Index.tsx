@@ -4,8 +4,9 @@ import {
   Home, Lightbulb, Lock, Mic, Music2, Pause, Play, Power,
   Settings, Shield, SkipBack, SkipForward, Snowflake, Sun, Thermometer,
   Video, Volume2, VolumeX, Volume1, Wind, Car, X, Pencil, EyeOff, Eye, Check,
-  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft, HeartPulse
+  Tv, ChevronUp, ChevronDown, ChevronLeft, ArrowLeft, CornerDownLeft, HeartPulse, Menu
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import doorbellFeed from "@/assets/doorbell-feed.jpg";
 import { Hairline, Label, StatusDot, Panel, SectionHead, TactileButton } from "@/components/odin/primitives";
@@ -35,12 +36,14 @@ const navItems: { icon: any; label: ViewKey }[] = [
   { icon: HeartPulse, label: "Health" },
 ];
 
-const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) => {
+const LeftRail = ({ view, setView, onNavigate }: { view: ViewKey; setView: (v: ViewKey) => void; onNavigate?: () => void }) => {
   const { connected, error, states } = useHa();
   const { user, signOut } = useAuth();
   const entityCount = Object.keys(states).length;
+  const pick = (v: ViewKey) => { setView(v); onNavigate?.(); };
   return (
-  <aside className="w-[232px] shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
+  <aside className="w-full md:w-[232px] h-full shrink-0 border-r border-hairline bg-surface-inset/60 flex flex-col">
+
     <div className="px-6 pt-7 pb-8">
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 grid place-items-center border border-hairline-strong relative">
@@ -63,7 +66,7 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
           return (
             <li key={it.label}>
               <button
-                onClick={() => setView(it.label)}
+                onClick={() => pick(it.label)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
                   active
                     ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
@@ -89,7 +92,7 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
           return (
             <li key={it.label}>
               <button
-                onClick={() => setView(it.label)}
+                onClick={() => pick(it.label)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
                   active
                     ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
@@ -138,7 +141,7 @@ const LeftRail = ({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => v
   );
 };
 
-const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
+const TopBar = ({ now, view, onMenuClick }: { now: Date; view: ViewKey; onMenuClick?: () => void }) => {
   const time = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
   const date = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const { states, connected, error } = useHa();
@@ -158,27 +161,37 @@ const TopBar = ({ now, view }: { now: Date; view: ViewKey }) => {
     : { text: "All Systems Nominal", cls: "text-foreground-mute" };
 
   return (
-    <header className="h-16 border-b border-hairline px-8 flex items-center justify-between bg-surface-inset/40">
-      <div className="flex items-baseline gap-6">
-        <h1 className="text-[18px] font-medium tracking-[0.04em]">{view}</h1>
-        <span className={`text-[12px] uppercase tracking-[0.18em] ${systemStatus.cls}`}>{systemStatus.text}</span>
+    <header className="h-14 md:h-16 border-b border-hairline px-4 md:px-8 flex items-center justify-between bg-surface-inset/40 gap-3">
+      <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="md:hidden w-9 h-9 -ml-1 grid place-items-center border border-hairline-strong shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-4 h-4" strokeWidth={1.5} />
+          </button>
+        )}
+        <h1 className="text-[15px] md:text-[18px] font-medium tracking-[0.04em] truncate">{view}</h1>
+        <span className={`hidden sm:inline text-[12px] uppercase tracking-[0.18em] ${systemStatus.cls}`}>{systemStatus.text}</span>
       </div>
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-4 md:gap-8 shrink-0">
+        <div className="hidden md:flex items-center gap-2.5">
           <Sun className="w-4 h-4 text-foreground-dim" strokeWidth={1.5} />
           <span className="mono text-[12px] text-foreground-dim num">
             {wTemp != null ? `${Math.round(wTemp)}${wUnit} EXT · ${wCond.toUpperCase()}` : "WEATHER UNAVAIL"}
           </span>
         </div>
         <div className="text-right">
-          <div className="mono text-[15px] num leading-none">{time}</div>
-          <div className="label mt-1">{date}</div>
+          <div className="mono text-[13px] md:text-[15px] num leading-none">{time}</div>
+          <div className="label mt-1 hidden sm:block">{date}</div>
         </div>
-        <div className="w-9 h-9 border border-hairline-strong grid place-items-center">
+        <div className="hidden md:grid w-9 h-9 border border-hairline-strong place-items-center">
           <Fingerprint className="w-4 h-4 text-foreground-dim" strokeWidth={1.5} />
         </div>
       </div>
     </header>
+
   );
 };
 
@@ -2499,8 +2512,8 @@ const OverviewView = () => {
   );
 
   return (
-    <div className="flex-1 flex min-h-0">
-      <section className="flex-1 p-8 space-y-6 overflow-auto">
+    <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+      <section className="flex-1 p-4 md:p-8 space-y-6 overflow-auto">
         <QuickControls />
         {rooms.length > 0 && (
           <div>
@@ -2525,7 +2538,7 @@ const OverviewView = () => {
 
       <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
 
-      <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
+      <aside className="w-full lg:w-[340px] shrink-0 border-t lg:border-t-0 lg:border-l border-hairline bg-surface-inset/40 p-4 md:p-5 space-y-4 overflow-auto">
         <Climate /><NowPlaying /><Calendar />
         <ActivityLog />
       </aside>
@@ -2533,9 +2546,11 @@ const OverviewView = () => {
   );
 };
 
+
 const Index = () => {
   const [now, setNow] = useState(new Date());
   const [view, setView] = useState<ViewKey>("Overview");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -2544,11 +2559,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      <LeftRail view={view} setView={setView} />
+      <div className="hidden md:flex">
+        <LeftRail view={view} setView={setView} />
+      </div>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent side="left" className="p-0 w-[260px] bg-surface-inset border-r border-hairline">
+          <LeftRail view={view} setView={setView} onNavigate={() => setMenuOpen(false)} />
+        </SheetContent>
+      </Sheet>
       <main className="flex-1 flex flex-col min-w-0">
-        <TopBar now={now} view={view} />
+        <TopBar now={now} view={view} onMenuClick={() => setMenuOpen(true)} />
         {view === "Overview" ? <OverviewView /> : (
-          <div className="flex-1 overflow-auto p-8">
+          <div className="flex-1 overflow-auto p-4 md:p-8">
             {view === "Lighting" && <LightingView />}
             {view === "Climate" && <ClimateView />}
             {view === "Security" && <SecurityView />}
@@ -2564,5 +2586,6 @@ const Index = () => {
     </div>
   );
 };
+
 
 export default Index;
