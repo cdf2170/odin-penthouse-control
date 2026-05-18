@@ -66,7 +66,7 @@ const LeftRail = ({ view, setView, onNavigate }: { view: ViewKey; setView: (v: V
           return (
             <li key={it.label}>
               <button
-                onClick={() => setView(it.label)}
+                onClick={() => pick(it.label)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
                   active
                     ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
@@ -92,7 +92,7 @@ const LeftRail = ({ view, setView, onNavigate }: { view: ViewKey; setView: (v: V
           return (
             <li key={it.label}>
               <button
-                onClick={() => setView(it.label)}
+                onClick={() => pick(it.label)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] transition-colors ${
                   active
                     ? "bg-surface-raised text-foreground border-l-2 border-odin-accent pl-[10px]"
