@@ -2512,8 +2512,8 @@ const OverviewView = () => {
   );
 
   return (
-    <div className="flex-1 flex min-h-0">
-      <section className="flex-1 p-8 space-y-6 overflow-auto">
+    <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+      <section className="flex-1 p-4 md:p-8 space-y-6 overflow-auto">
         <QuickControls />
         {rooms.length > 0 && (
           <div>
@@ -2538,13 +2538,14 @@ const OverviewView = () => {
 
       <RoomDetailsTray room={liveActiveRoom} onClose={() => setActiveRoom(null)} />
 
-      <aside className="w-[340px] shrink-0 border-l border-hairline bg-surface-inset/40 p-5 space-y-4 overflow-auto">
+      <aside className="w-full lg:w-[340px] shrink-0 border-t lg:border-t-0 lg:border-l border-hairline bg-surface-inset/40 p-4 md:p-5 space-y-4 overflow-auto">
         <Climate /><NowPlaying /><Calendar />
         <ActivityLog />
       </aside>
     </div>
   );
 };
+
 
 const Index = () => {
   const [now, setNow] = useState(new Date());
